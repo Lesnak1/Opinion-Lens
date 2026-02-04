@@ -1,0 +1,74 @@
+{
+    "manifest_version": 3,
+    "name": "Opinion Lens",
+    "version": "1.0.0",
+    "description": "The Ultimate Prediction Market Companion for Opinion.trade - Track markets, get alerts, and trade directly from Twitter/X",
+    "icons": {
+        "16": "assets/icons/icon-16.png",
+        "32": "assets/icons/icon-32.png",
+        "48": "assets/icons/icon-48.png",
+        "128": "assets/icons/icon-128.png"
+    },
+    "action": {
+        "default_popup": "popup/popup.html",
+        "default_icon": {
+            "16": "assets/icons/icon-16.png",
+            "32": "assets/icons/icon-32.png",
+            "48": "assets/icons/icon-48.png"
+        },
+        "default_title": "Opinion Lens"
+    },
+    "background": {
+        "service_worker": "service-worker.js",
+        "type": "module"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://twitter.com/*",
+                "https://x.com/*"
+            ],
+            "js": [
+                "twitter-injector.js"
+            ],
+            "css": [
+                "content/twitter-styles.css"
+            ],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://app.opinion.trade/*"
+            ],
+            "js": [
+                "opinion-injector.js"
+            ],
+            "css": [
+                "content/opinion-styles.css"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "permissions": [
+        "storage",
+        "notifications",
+        "alarms"
+    ],
+    "host_permissions": [
+        "https://api.opinion.trade/*",
+        "https://ws.opinion.trade/*"
+    ],
+    "options_page": "options/options.html",
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "assets/*"
+            ],
+            "matches": [
+                "https://twitter.com/*",
+                "https://x.com/*",
+                "https://app.opinion.trade/*"
+            ]
+        }
+    ]
+}

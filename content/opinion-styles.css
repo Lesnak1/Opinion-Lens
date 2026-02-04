@@ -1,0 +1,6 @@
+/* Opinion.trade Content Script Styles - Loaded for fallback */
+
+#opinion-lens-widget {
+    /* Widget styles are injected dynamically */
+    display: block;
+}

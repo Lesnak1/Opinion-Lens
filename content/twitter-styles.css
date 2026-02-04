@@ -1,0 +1,5 @@
+/* Twitter Content Script Styles - Loaded for fallback if Shadow DOM fails */
+
+.opinion-lens-card {
+    margin: 12px 0;
+}

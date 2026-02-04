@@ -1,0 +1,20 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#gradient)"/>
+  
+  <!-- Inner glow -->
+  <circle cx="64" cy="64" r="48" fill="rgba(255,255,255,0.1)"/>
+  
+  <!-- Letter O -->
+  <text x="64" y="80" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="56" font-weight="700" fill="white">O</text>
+  
+  <!-- Lens accent -->
+  <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.3)" stroke-width="4" fill="none"/>
+  
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+</svg>

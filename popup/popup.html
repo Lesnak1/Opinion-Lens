@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400, height=600">
+  <title>Opinion Lens</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <img src="../assets/icons/icon-32.png" alt="Opinion Lens" class="logo">
+        <h1 class="title">Opinion Lens</h1>
+      </div>
+      <div class="header-right">
+        <span id="connectionStatus" class="status status--disconnected" title="Disconnected">
+          <span class="status-dot"></span>
+        </span>
+        <button id="settingsBtn" class="icon-btn" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Portfolio Summary -->
+    <section class="portfolio" id="portfolio">
+      <div class="portfolio-item">
+        <span class="portfolio-label">Total Value</span>
+        <span class="portfolio-value" id="totalValue">$0.00</span>
+      </div>
+      <div class="portfolio-item">
+        <span class="portfolio-label">Today's P&L</span>
+        <span class="portfolio-value portfolio-pnl" id="todayPnl">$0.00</span>
+      </div>
+      <div class="portfolio-item">
+        <span class="portfolio-label">Positions</span>
+        <span class="portfolio-value" id="positionCount">0</span>
+      </div>
+    </section>
+
+    <!-- Search -->
+    <div class="search-container">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search markets...">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="M21 21l-4.35-4.35"/>
+      </svg>
+    </div>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab tab--active" data-tab="trending">🔥 Trending</button>
+      <button class="tab" data-tab="watchlist">⭐ Watchlist</button>
+    </nav>
+
+    <!-- Market Lists -->
+    <main class="markets-container">
+      <!-- Trending Markets -->
+      <section id="trendingSection" class="markets-section">
+        <div id="trendingMarkets" class="markets-list">
+          <div class="loading-skeleton">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Watchlist -->
+      <section id="watchlistSection" class="markets-section hidden">
+        <div id="watchlistMarkets" class="markets-list">
+          <div class="empty-state">
+            <span class="empty-icon">⭐</span>
+            <p>No markets in watchlist</p>
+            <p class="empty-hint">Click the star on any market to add it</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button id="refreshBtn" class="btn btn--secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Refresh
+      </button>
+      <a href="https://app.opinion.trade" target="_blank" class="btn btn--primary">
+        Open Opinion.trade
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+        </svg>
+      </a>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

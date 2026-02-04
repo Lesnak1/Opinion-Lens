@@ -1,0 +1,93 @@
+﻿
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/philo/Opi/opinion-lens[39m
+
+ [32mÔ£ô[39m tests/constants.test.js [2m ([22m[2m29 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32mÔ£ô[39m tests/storage.test.js [2m ([22m[2m16 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32mÔ£ô[39m tests/utils.test.js [2m ([22m[2m38 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [33mÔØ»[39m tests/api-integration.test.js [2m ([22m[2m8 tests[22m [2m|[22m [31m1 failed[39m[2m)[22m[33m 3624[2mms[22m[39m
+[31m   [33mÔØ»[31m tests/api-integration.test.js[2m > [22mAPI Error Handling[2m > [22mhandles timeout correctly[39m
+[31m     ÔåÆ expected 'TypeError' to be 'AbortError' // Object.is equality[39m
+
+node.exe : [31mÔÄ»ÔÄ
+»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1m
+[7m Failed Tests 1 [
+27m[22mÔÄ»ÔÄ»ÔÄ»ÔÄ»Ô
+Ä»ÔÄ»ÔÄ»[39m
+At line:1 char:1
++ & "C:\Program Files
+\nodejs/node.exe" "C:
+\Program Files\nodejs
+/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([31mÔÄ   
+ »ÔÄ»ÔÄ»Ô...»ÔÄ»Ô    
+Ä»ÔÄ»[39m:Strin    g
+) [], RemoteExc    ep
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/a
+pi-integration.test.j
+s[2m > [22mAPI Erro
+r Handling[2m > [22
+mhandles timeout corr
+ectly
+[31m[1mAssertionErr
+or[22m: expected 'Ty
+peError' to be 'Abort
+Error' // Object.is e
+quality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- AbortError[39
+m
+[31m+ TypeError[39m
+
+[36m [2mÔØ»[22m te
+sts/api-integration.t
+est.js:[2m104:32[22
+m[39m
+    [90m102| [39m  
+          [34mclearT
+imeout[39m(timeoutId
+)[33m;[39m
+    [90m103| [39m  
+      } [35mcatch[3
+9m (error) {
+    [90m104| [39m  
+          [34mexpect
+[39m(error[33m.[39
+mname)[33m.[39m[34
+mtoBe[39m([32m'Abor
+tError'[39m)[33m;[
+39m
+    [90m   | [39m  
+                     
+        [31m^[39m
+    [90m105| [39m  
+      }
+    [90m106| [39m  
+  })[33m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/
+1]ÔÄ»[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m90 passed[39m[22m[90m (91)[39m
+[2m   Start at [22m 22:09:28
+[2m   Duration [22m 4.51s[2m (transform 105ms, setup 0ms, collect 182ms, tests 3.65s, environment 2.18s, prepare 412ms)[22m
+

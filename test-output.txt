@@ -1,0 +1,1009 @@
+﻿
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/philo/Opi/opinion-lens[39m
+
+ [33mÔØ»[39m tests/storage.test.js [2m ([22m[2m19 tests[22m [2m|[22m [31m19 failed[39m[2m)[22m[90m 8[2mms[22m[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mSettings[2m > [22mreturns default settings when none saved[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'getSettings')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mSettings[2m > [22msaves and retrieves settings[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'saveSettings')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mSettings[2m > [22mmerges settings with defaults[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'saveSettings')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mWatchlist[2m > [22mreturns empty array when no watchlist[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'getWatchlist')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mWatchlist[2m > [22madds market to watchlist[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'addToWatchlist')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mWatchlist[2m > [22mdoes not add duplicate to watchlist[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'addToWatchlist')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mWatchlist[2m > [22mremoves market from watchlist[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'addToWatchlist')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mWatchlist[2m > [22mchecks if market is in watchlist[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'addToWatchlist')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mAlerts[2m > [22mreturns empty array when no alerts[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'getAlerts')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mAlerts[2m > [22mcreates alert with generated ID[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'createAlert')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mAlerts[2m > [22mdeletes alert by ID[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'createAlert')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mAPI Key[2m > [22mreturns null when no API key[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'getApiKey')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mAPI Key[2m > [22msaves and retrieves API key[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'saveApiKey')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mAPI Key[2m > [22mremoves API key[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'saveApiKey')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mCache[2m > [22msetCache and getCache work correctly[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'setCache')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mCache[2m > [22mreturns null for expired cache[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'setCache')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mCache[2m > [22mreturns null for non-existent cache[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'getCache')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mCache[2m > [22mclears cache[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'setCache')[39m
+[31m   [33mÔØ»[31m tests/storage.test.js[2m > [22mStorageManager[2m > [22mclearAllData[2m > [22mclears all stored data[39m
+[31m     ÔåÆ Cannot read properties of undefined (reading 'saveSettings')[39m
+
+node.exe : [31mÔÄ»ÔÄ
+»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1m[7m
+ Failed Tests 19 [27
+m[22mÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»[39m
+At line:1 char:1
++ & "C:\Program Files
+\nodejs/node.exe" "C:
+\Program Files\nodejs
+/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([31mÔÄ   
+ »ÔÄ»ÔÄ»Ô...»ÔÄ»Ô    
+Ä»ÔÄ»[39m:Strin    g
+) [], RemoteExc    ep
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mSettings[2
+m > [22mreturns defa
+ult settings when non
+e saved
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'getSettings')
+[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m64:51[22m[39m
+    [90m 62| [39m  
+  [34mdescribe[39m(
+[32m'Settings'[39m
+[33m,[39m () [33m=>
+[39m {
+    [90m 63| [39m  
+      [34mit[39m([
+32m'returns default s
+ettings when none sav
+ed'[39m[33m,[39m 
+[35masync[39m () [3
+3m=>[39m {
+    [90m 64| [39m  
+          [35mconst
+[39m settings [33m=
+[39m [35mawait[39m 
+storageManager[33m.
+[39m[34mgetSettings
+[39m()[33m;[39m
+    [90m   | [39m  
+                     
+                     
+      [31m^[39m
+    [90m 65| [39m
+    [90m 66| [39m  
+          [34mexpect
+[39m(settings)[33m.
+[39m[34mtoBeDefined
+[39m()[33m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mSettings[2
+m > [22msaves and re
+trieves settings
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'saveSettings'
+)[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m81:34[22m[39m
+    [90m 79| [39m  
+          }[33m;[39
+m
+    [90m 80| [39m
+    [90m 81| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msaveSet
+tings[39m(newSetting
+s)[33m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m 82| [39m  
+          [35mconst
+[39m retrieved [33m=
+[39m [35mawait[39m
+ storageManager[33m.
+[39m[34mgetSettings
+[39m()[33m;[39m
+    [90m 83| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mSettings[2
+m > [22mmerges setti
+ngs with defaults
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'saveSettings'
+)[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m89:34[22m[39m
+    [90m 87| [39m
+    [90m 88| [39m  
+      [34mit[39m([
+32m'merges settings w
+ith defaults'[39m[3
+3m,[39m [35masync[
+39m () [33m=>[39m {
+    [90m 89| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msaveSet
+tings[39m({ theme[3
+3m:[39m [32m'light'
+[39m })[33m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m 90| [39m  
+          [35mconst
+[39m settings [33m=
+[39m [35mawait[39m 
+storageManager[33m.
+[39m[34mgetSettings
+[39m()[33m;[39m
+    [90m 91| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[3/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mWatchlist[
+2m > [22mreturns emp
+ty array when no watc
+hlist
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'getWatchlist'
+)[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m99:52[22m[39m
+    [90m 97| [39m  
+  [34mdescribe[39m(
+[32m'Watchlist'[39m
+[33m,[39m () [33m=
+>[39m {
+    [90m 98| [39m  
+      [34mit[39m([
+32m'returns empty arr
+ay when no watchlist'
+[39m[33m,[39m [35
+masync[39m () [33m=
+>[39m {
+    [90m 99| [39m  
+          [35mconst
+[39m watchlist [33m=
+[39m [35mawait[39m
+ storageManager[33m.
+[39m[34mgetWatchlis
+t[39m()[33m;[39m
+    [90m   | [39m  
+                     
+                     
+       [31m^[39m
+    [90m100| [39m
+    [90m101| [39m  
+          [34mexpect
+[39m([33mArray[39m
+[33m.[39m[34misArr
+ay[39m(watchlist))[
+33m.[39m[34mtoBe[3
+9m([35mtrue[39m)[3
+3m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[4/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mWatchlist[
+2m > [22madds market
+ to watchlist
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'addToWatchlis
+t')[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m106:48[22m[39m
+    [90m104| [39m
+    [90m105| [39m  
+      [34mit[39m([
+32m'adds market to wa
+tchlist'[39m[33m,[
+39m [35masync[39m (
+) [33m=>[39m {
+    [90m106| [39m  
+          [35mconst
+[39m added [33m=[39
+m [35mawait[39m sto
+rageManager[33m.[39
+m[34maddToWatchlist
+[39m([32m'market-[3
+9mÔÇĞ
+    [90m   | [39m  
+                     
+                     
+   [31m^[39m
+    [90m107| [39m
+    [90m108| [39m  
+          [34mexpect
+[39m(added)[33m.[3
+9m[34mtoBe[39m([35
+mtrue[39m)[33m;[39
+m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[5/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mWatchlist[
+2m > [22mdoes not ad
+d duplicate to watchl
+ist
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'addToWatchlis
+t')[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m115:34[22m[39m
+    [90m113| [39m
+    [90m114| [39m  
+      [34mit[39m([
+32m'does not add dupl
+icate to watchlist'[
+39m[33m,[39m [35ma
+sync[39m () [33m=>
+[39m {
+    [90m115| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34maddToWa
+tchlist[39m([32m'ma
+rket-1'[39m)[33m;[
+39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m116| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34maddToWa
+tchlist[39m([32m'ma
+rket-1'[39m)[33m;[
+39m
+    [90m117| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[6/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mWatchlist[
+2m > [22mremoves mar
+ket from watchlist
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'addToWatchlis
+t')[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m123:34[22m[39m
+    [90m121| [39m
+    [90m122| [39m  
+      [34mit[39m([
+32m'removes market fr
+om watchlist'[39m[3
+3m,[39m [35masync[
+39m () [33m=>[39m {
+    [90m123| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34maddToWa
+tchlist[39m([32m'ma
+rket-1'[39m)[33m;[
+39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m124| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34maddToWa
+tchlist[39m([32m'ma
+rket-2'[39m)[33m;[
+39m
+    [90m125| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[7/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mWatchlist[
+2m > [22mchecks if m
+arket is in watchlist
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'addToWatchlis
+t')[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m136:34[22m[39m
+    [90m134| [39m
+    [90m135| [39m  
+      [34mit[39m([
+32m'checks if market 
+is in watchlist'[39m
+[33m,[39m [35masyn
+c[39m () [33m=>[39
+m {
+    [90m136| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34maddToWa
+tchlist[39m([32m'ma
+rket-1'[39m)[33m;[
+39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m137| [39m
+    [90m138| [39m  
+          [34mexpect
+[39m([35mawait[39m
+ storageManager[33m.
+[39m[34misInWatchli
+st[39m([32m'market-
+1'[39m))[33m.[39m
+[34mtoB[39mÔÇĞ
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[8/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mAlerts[2m 
+> [22mreturns empty 
+array when no alerts
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'getAlerts')[
+39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m145:49[22m[39m
+    [90m143| [39m  
+  [34mdescribe[39m(
+[32m'Alerts'[39m[3
+3m,[39m () [33m=>[
+39m {
+    [90m144| [39m  
+      [34mit[39m([
+32m'returns empty arr
+ay when no alerts'[3
+9m[33m,[39m [35mas
+ync[39m () [33m=>[
+39m {
+    [90m145| [39m  
+          [35mconst
+[39m alerts [33m=[3
+9m [35mawait[39m st
+orageManager[33m.[3
+9m[34mgetAlerts[39m
+()[33m;[39m
+    [90m   | [39m  
+                     
+                     
+    [31m^[39m
+    [90m146| [39m
+    [90m147| [39m  
+          [34mexpect
+[39m([33mArray[39m
+[33m.[39m[34misArr
+ay[39m(alerts))[33m
+.[39m[34mtoBe[39m(
+[35mtrue[39m)[33m;
+[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[9/19]
+ÔÄ»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mAlerts[2m 
+> [22mcreates alert 
+with generated ID
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'createAlert')
+[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m152:48[22m[39m
+    [90m150| [39m
+    [90m151| [39m  
+      [34mit[39m([
+32m'creates alert wit
+h generated ID'[39m
+[33m,[39m [35masync
+[39m () [33m=>[39m
+ {
+    [90m152| [39m  
+          [35mconst
+[39m alert [33m=[39
+m [35mawait[39m sto
+rageManager[33m.[39
+m[34mcreateAlert[39
+m({
+    [90m   | [39m  
+                     
+                     
+   [31m^[39m
+    [90m153| [39m  
+              marketI
+d[33m:[39m [32m'ma
+rket-1'[39m[33m,[3
+9m
+    [90m154| [39m  
+              conditi
+on[33m:[39m [32m'a
+bove'[39m[33m,[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[10/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mAlerts[2m 
+> [22mdeletes alert 
+by ID
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'createAlert')
+[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m166:48[22m[39m
+    [90m164| [39m
+    [90m165| [39m  
+      [34mit[39m([
+32m'deletes alert by 
+ID'[39m[33m,[39m 
+[35masync[39m () [3
+3m=>[39m {
+    [90m166| [39m  
+          [35mconst
+[39m alert [33m=[39
+m [35mawait[39m sto
+rageManager[33m.[39
+m[34mcreateAlert[39
+m({
+    [90m   | [39m  
+                     
+                     
+   [31m^[39m
+    [90m167| [39m  
+              marketI
+d[33m:[39m [32m'ma
+rket-1'[39m[33m,[3
+9m
+    [90m168| [39m  
+              conditi
+on[33m:[39m [32m'a
+bove'[39m[33m,[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[11/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mAPI Key[2m
+ > [22mreturns null 
+when no API key
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'getApiKey')[
+39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m182:49[22m[39m
+    [90m180| [39m  
+  [34mdescribe[39m(
+[32m'API Key'[39m[
+33m,[39m () [33m=>
+[39m {
+    [90m181| [39m  
+      [34mit[39m([
+32m'returns null when
+ no API key'[39m[33
+m,[39m [35masync[3
+9m () [33m=>[39m {
+    [90m182| [39m  
+          [35mconst
+[39m apiKey [33m=[3
+9m [35mawait[39m st
+orageManager[33m.[3
+9m[34mgetApiKey[39m
+()[33m;[39m
+    [90m   | [39m  
+                     
+                     
+    [31m^[39m
+    [90m183| [39m  
+          [34mexpect
+[39m(apiKey)[33m.[
+39m[34mtoBeNull[39m
+()[33m;[39m
+    [90m184| [39m  
+      })[33m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[12/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mAPI Key[2m
+ > [22msaves and ret
+rieves API key
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'saveApiKey')
+[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m187:34[22m[39m
+    [90m185| [39m
+    [90m186| [39m  
+      [34mit[39m([
+32m'saves and retriev
+es API key'[39m[33m
+,[39m [35masync[39
+m () [33m=>[39m {
+    [90m187| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msaveApi
+Key[39m([32m'test-a
+pi-key-123'[39m)[33
+m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m188| [39m  
+          [35mconst
+[39m retrieved [33m=
+[39m [35mawait[39m
+ storageManager[33m.
+[39m[34mgetApiKey[
+39m()[33m;[39m
+    [90m189| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[13/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mAPI Key[2m
+ > [22mremoves API k
+ey
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'saveApiKey')
+[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m194:34[22m[39m
+    [90m192| [39m
+    [90m193| [39m  
+      [34mit[39m([
+32m'removes API key'
+[39m[33m,[39m [35m
+async[39m () [33m=>
+[39m {
+    [90m194| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msaveApi
+Key[39m([32m'test-a
+pi-key-123'[39m)[33
+m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m195| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34mremoveA
+piKey[39m()[33m;[3
+9m
+    [90m196| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[14/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mCache[2m >
+ [22msetCache and ge
+tCache work correctly
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'setCache')[3
+9m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m206:34[22m[39m
+    [90m204| [39m  
+          [35mconst
+[39m data [33m=[39m
+ { price[33m:[39m 
+[34m0.72[39m[33m,[
+39m volume[33m:[39m
+ [34m1000[39m }[33
+m;[39m
+    [90m205| [39m
+    [90m206| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msetCach
+e[39m([32m'test-key
+'[39m[33m,[39m dat
+a[33m,[39m [34m600
+00[39m)[33m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m207| [39m  
+          [35mconst
+[39m cached [33m=[3
+9m [35mawait[39m st
+orageManager[33m.[3
+9m[34mgetCache[39m(
+[32m'test-key'[39m)
+[33m;[39m
+    [90m208| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[15/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mCache[2m >
+ [22mreturns null fo
+r expired cache
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'setCache')[3
+9m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m216:34[22m[39m
+    [90m214| [39m
+    [90m215| [39m  
+          [90m// Set
+ with 0 TTL (immediat
+ely expired)[39m
+    [90m216| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msetCach
+e[39m([32m'test-key
+'[39m[33m,[39m dat
+a[33m,[39m [34m0[
+39m)[33m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m217| [39m
+    [90m218| [39m  
+          [90m// Wai
+t a bit[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[16/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mCache[2m >
+ [22mreturns null fo
+r non-existent cache
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'getCache')[3
+9m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m226:49[22m[39m
+    [90m224| [39m
+    [90m225| [39m  
+      [34mit[39m([
+32m'returns null for 
+non-existent cache'[
+39m[33m,[39m [35ma
+sync[39m () [33m=>
+[39m {
+    [90m226| [39m  
+          [35mconst
+[39m cached [33m=[3
+9m [35mawait[39m st
+orageManager[33m.[3
+9m[34mgetCache[39m(
+[32m'non-existent[3
+9mÔÇĞ
+    [90m   | [39m  
+                     
+                     
+    [31m^[39m
+    [90m227| [39m  
+          [34mexpect
+[39m(cached)[33m.[
+39m[34mtoBeNull[39m
+()[33m;[39m
+    [90m228| [39m  
+      })[33m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[17/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mCache[2m >
+ [22mclears cache
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'setCache')[3
+9m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m231:34[22m[39m
+    [90m229| [39m
+    [90m230| [39m  
+      [34mit[39m([
+32m'clears cache'[39
+m[33m,[39m [35masy
+nc[39m () [33m=>[3
+9m {
+    [90m231| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msetCach
+e[39m([32m'key1'[3
+9m[33m,[39m [32m'v
+alue1'[39m[33m,[39
+m [34m60000[39m)[3
+3m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m232| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msetCach
+e[39m([32m'key2'[3
+9m[33m,[39m [32m'v
+alue2'[39m[33m,[39
+m [34m60000[39m)[3
+3m;[39m
+    [90m233| [39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[18/19]ÔÄ
+»[22m[39m
+
+[31m[1m[7m FAIL [
+27m[22m[39m tests/s
+torage.test.js[2m > 
+[22mStorageManager[
+2m > [22mclearAllDat
+a[2m > [22mclears a
+ll stored data
+[31m[1mTypeError[2
+2m: Cannot read prope
+rties of undefined (r
+eading 'saveSettings'
+)[39m
+[36m [2mÔØ»[22m te
+sts/storage.test.js:
+[2m243:34[22m[39m
+    [90m241| [39m  
+  [34mdescribe[39m(
+[32m'clearAllData'[
+39m[33m,[39m () [3
+3m=>[39m {
+    [90m242| [39m  
+      [34mit[39m([
+32m'clears all stored
+ data'[39m[33m,[39
+m [35masync[39m () 
+[33m=>[39m {
+    [90m243| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msaveSet
+tings[39m({ theme[3
+3m:[39m [32m'light'
+[39m })[33m;[39m
+    [90m   | [39m  
+                     
+          [31m^[39m
+    [90m244| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34maddToWa
+tchlist[39m([32m'ma
+rket-1'[39m)[33m;[
+39m
+    [90m245| [39m  
+          [35mawait
+[39m storageManager[
+33m.[39m[34msaveApi
+Key[39m([32m'test-k
+ey'[39m)[33m;[39m
+
+[31m[2mÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»[19/19]ÔÄ
+»[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m19 failed[39m[22m[90m (19)[39m
+[2m   Start at [22m 22:06:25
+[2m   Duration [22m 866ms[2m (transform 23ms, setup 1ms, collect 29ms, tests 8ms, environment 516ms, prepare 111ms)[22m
+
