@@ -464,3 +464,155 @@ body {
 .markets-container::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* API Key Required State */
+.api-key-required {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+  height: 100%;
+  min-height: 300px;
+}
+
+.api-key-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.api-key-required h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.api-key-required p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.api-key-steps {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+  width: 100%;
+}
+
+.api-key-steps p {
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.api-key-steps ol {
+  list-style-position: inside;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.api-key-steps li {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.api-key-steps a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.api-key-steps a:hover {
+  text-decoration: underline;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-primary);
+}
+
+/* Status - No API Key */
+.status--no-key .status-dot {
+  background: #F59E0B;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.error-state p {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.error-detail {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.btn-retry {
+  margin-top: 16px;
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-visible);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-retry:hover {
+  background: var(--border-visible);
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: var(--text-secondary);
+}

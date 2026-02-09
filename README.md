@@ -215,6 +215,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   <p>Made with ❤️ for prediction market enthusiasts</p>
   <p>
     <a href="https://opinion.trade">Opinion.trade</a> •
-    <a href="https://twitter.com/opaboratory">@opaboratory</a>
+    <a href="https://x.com/opinionlabsxyz">@opinionlabsxyz</a>
+  </p>
+  
+  <h4>Built by</h4>
+  <p>
+    📧 <a href="mailto:philosophyfactss@gmail.com">philosophyfactss@gmail.com</a><br>
+    🐦 <a href="https://x.com/lesnacrex">@lesnacrex</a><br>
+    💬 Discord: <code>kresna6773</code>
   </p>
 </div>
+

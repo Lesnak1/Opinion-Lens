@@ -1,6 +1,7 @@
 /**
  * Opinion Lens - Service Worker
  * Central orchestrator for background operations
+ * Requires API key for all operations - no demo/mock data
  */
 
 import { MESSAGE_TYPES } from '../shared/constants.js';
@@ -20,18 +21,21 @@ async function init() {
 
     console.log('[Opinion Lens] Initializing...');
 
-    // Initialize API client
+    // Initialize API client with stored key
     const hasApiKey = await apiClient.init();
 
     if (hasApiKey) {
-        // Connect WebSocket
-        await wsManager.connect();
-
-        // Setup WebSocket message handler
-        wsManager.onMessage(handleWSMessage);
-
+        try {
+            // Connect WebSocket
+            await wsManager.connect();
+            wsManager.onMessage(handleWSMessage);
+        } catch (e) {
+            console.log('[Opinion Lens] WebSocket connection failed:', e.message);
+        }
         // Setup alert checking alarm
         chrome.alarms.create('checkAlerts', { periodInMinutes: 1 });
+    } else {
+        console.log('[Opinion Lens] No API key configured - extension in standby mode');
     }
 
     isInitialized = true;
@@ -71,7 +75,10 @@ async function broadcastToTabs(message) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleMessage(message, sender)
         .then(sendResponse)
-        .catch(error => sendResponse({ error: error.message }));
+        .catch(error => {
+            console.error('[Opinion Lens] Message error:', error.message);
+            sendResponse({ error: error.message });
+        });
     return true; // Keep channel open for async response
 });
 
@@ -97,7 +104,9 @@ async function handleMessage(message, sender) {
 
         case MESSAGE_TYPES.ADD_TO_WATCHLIST:
             const added = await storage.addToWatchlist(message.marketId);
-            wsManager.subscribe('market:prices', { marketId: message.marketId });
+            if (wsManager.isConnected) {
+                wsManager.subscribe('market:prices', { marketId: message.marketId });
+            }
             return added;
 
         case MESSAGE_TYPES.REMOVE_FROM_WATCHLIST:
@@ -120,12 +129,34 @@ async function handleMessage(message, sender) {
         case MESSAGE_TYPES.UPDATE_SETTINGS:
             return storage.updateSettings(message.settings);
 
-        // Connection
+        // API Key Management
+        case MESSAGE_TYPES.SET_API_KEY:
+            await storage.setApiKey(message.apiKey);
+            apiClient.setApiKey(message.apiKey);
+            // Reinitialize with new key
+            if (message.apiKey) {
+                try {
+                    await wsManager.connect();
+                    wsManager.onMessage(handleWSMessage);
+                } catch (e) {
+                    console.log('[Opinion Lens] WebSocket failed after key update');
+                }
+            }
+            return { success: true };
+
+        case MESSAGE_TYPES.TEST_API_KEY:
+            return apiClient.testApiKey(message.apiKey);
+
+        // Connection & Status
         case MESSAGE_TYPES.CONNECTION_STATUS:
-            return wsManager.getStatus();
+            return {
+                wsConnected: wsManager.isConnected,
+                hasApiKey: apiClient.hasApiKey()
+            };
 
         default:
-            throw new Error(`Unknown message type: ${message.type}`);
+            console.warn(`[Opinion Lens] Unknown message type: ${message.type}`);
+            return null;
     }
 }
 
@@ -135,14 +166,16 @@ async function handleMessage(message, sender) {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === 'checkAlerts') {
         // Periodic alert checking when WS is disconnected
-        if (!wsManager.isConnected) {
+        if (!wsManager.isConnected && apiClient.hasApiKey()) {
             const watchlist = await storage.getWatchlist();
             for (const marketId of watchlist) {
                 try {
                     const market = await apiClient.getMarketDetails(marketId);
-                    const prices = {};
-                    market.tokens.forEach(t => { prices[t.tokenId] = t.lastPrice; });
-                    await notificationService.checkAlerts(prices);
+                    if (market?.tokens) {
+                        const prices = {};
+                        market.tokens.forEach(t => { prices[t.tokenId] = t.lastPrice; });
+                        await notificationService.checkAlerts(prices);
+                    }
                 } catch (error) {
                     console.error('[Alarm] Failed to check market:', marketId, error);
                 }

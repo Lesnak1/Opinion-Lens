@@ -1,86 +1,91 @@
 /**
  * Opinion Lens - API Client
- * Wrapper for Opinion.trade REST API with retry logic and caching
+ * Handles all Opinion.trade API communications
+ * Requires API key for all operations - no demo/mock data
  */
 
-import {
-    API_BASE_URL,
-    API_RETRY_ATTEMPTS,
-    API_RETRY_BASE_DELAY,
-    CACHE_TTL
-} from '../shared/constants.js';
 import { storage } from '../shared/storage.js';
-import { sleep } from '../shared/utils.js';
 
-class APIClient {
+const PROXY_API_BASE = 'https://proxy.opinion.trade:8443/openapi';
+const REQUEST_TIMEOUT = 15000;
+
+class ApiClient {
     constructor() {
         this.apiKey = null;
-        this.requestQueue = [];
-        this.lastRequestTime = 0;
-        this.minRequestInterval = 67; // ~15 req/s
+        this.isInitialized = false;
     }
 
     /**
-     * Initialize API client with API key
+     * Initialize with API key from storage
      */
     async init() {
         this.apiKey = await storage.getApiKey();
+        this.isInitialized = true;
         return !!this.apiKey;
     }
 
     /**
-     * Get request headers
+     * Set API key
      */
-    getHeaders() {
-        return {
-            'Content-Type': 'application/json',
-            ...(this.apiKey && { 'apikey': this.apiKey })
-        };
+    setApiKey(key) {
+        this.apiKey = key;
     }
 
     /**
-     * Rate-limited fetch with retry
+     * Check if API key is configured
      */
-    async fetch(endpoint, options = {}) {
-        // Rate limiting
-        const now = Date.now();
-        const timeSinceLastRequest = now - this.lastRequestTime;
-        if (timeSinceLastRequest < this.minRequestInterval) {
-            await sleep(this.minRequestInterval - timeSinceLastRequest);
+    hasApiKey() {
+        return !!this.apiKey;
+    }
+
+    /**
+     * Fetch with timeout and error handling
+     */
+    async fetchWithTimeout(url, options = {}) {
+        if (!this.apiKey) {
+            throw new Error('API_KEY_REQUIRED');
         }
-        this.lastRequestTime = Date.now();
 
-        const url = `${API_BASE_URL}${endpoint}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-        for (let attempt = 0; attempt < API_RETRY_ATTEMPTS; attempt++) {
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    headers: { ...this.getHeaders(), ...options.headers }
-                });
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal,
+                headers: {
+                    'apikey': this.apiKey,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
 
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('INVALID_API_KEY');
+                }
                 if (response.status === 429) {
-                    const retryAfter = response.headers.get('Retry-After') || 1;
-                    await sleep(parseInt(retryAfter) * 1000);
-                    continue;
+                    throw new Error('RATE_LIMITED');
                 }
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                if (data.code !== 0) {
-                    throw new Error(data.message || 'API Error');
-                }
-
-                return data.data;
-            } catch (error) {
-                if (attempt === API_RETRY_ATTEMPTS - 1) {
-                    throw error;
-                }
-                await sleep(API_RETRY_BASE_DELAY * Math.pow(2, attempt));
+                throw new Error(`API_ERROR_${response.status}`);
             }
+
+            const data = await response.json();
+
+            if (data.code !== 0) {
+                throw new Error(data.msg || 'API_ERROR');
+            }
+
+            return data.result;
+        } catch (error) {
+            clearTimeout(timeoutId);
+
+            if (error.name === 'AbortError') {
+                throw new Error('TIMEOUT');
+            }
+            throw error;
         }
     }
 
@@ -88,70 +93,97 @@ class APIClient {
      * Get markets list
      */
     async getMarkets(params = {}) {
-        const { page = 1, limit = 10, status = 'activated', sort = 5 } = params;
-        const query = new URLSearchParams({ page, limit, status, sort }).toString();
+        const { page = 1, limit = 20, status = 'activated', sortBy = 5 } = params;
+        const queryParams = new URLSearchParams({
+            page: String(page),
+            limit: String(limit),
+            status,
+            sortBy: String(sortBy)
+        });
 
-        const cacheKey = `markets_${query}`;
-        if (await storage.isCacheValid(cacheKey, CACHE_TTL.MARKETS)) {
-            const cached = await storage.getCache(cacheKey);
-            return cached.data;
-        }
+        const result = await this.fetchWithTimeout(
+            `${PROXY_API_BASE}/market?${queryParams}`
+        );
 
-        const data = await this.fetch(`/market?${query}`);
-        await storage.setCache(cacheKey, data);
-        return data;
+        return result?.list || [];
     }
 
     /**
-     * Get market details
+     * Get market details by ID
      */
     async getMarketDetails(marketId) {
-        const cacheKey = `market_${marketId}`;
-        if (await storage.isCacheValid(cacheKey, CACHE_TTL.MARKET_DETAILS)) {
-            const cached = await storage.getCache(cacheKey);
-            return cached.data;
-        }
-
-        const data = await this.fetch(`/market/${marketId}`);
-        await storage.setCache(cacheKey, data);
-        return data;
+        return this.fetchWithTimeout(`${PROXY_API_BASE}/market/${marketId}`);
     }
 
     /**
-     * Get latest price for token
+     * Get latest token price
      */
     async getLatestPrice(tokenId) {
-        return this.fetch(`/token/latest-price?tokenId=${tokenId}`);
+        const queryParams = new URLSearchParams({ token_id: tokenId });
+        return this.fetchWithTimeout(
+            `${PROXY_API_BASE}/token/latest-price?${queryParams}`
+        );
     }
 
     /**
-     * Get orderbook
+     * Get token orderbook
      */
-    async getOrderbook(tokenId, depth = 10) {
-        return this.fetch(`/token/orderbook?tokenId=${tokenId}&depth=${depth}`);
+    async getOrderbook(tokenId) {
+        const queryParams = new URLSearchParams({ token_id: tokenId });
+        return this.fetchWithTimeout(
+            `${PROXY_API_BASE}/token/orderbook?${queryParams}`
+        );
     }
 
     /**
      * Get price history
      */
-    async getPriceHistory(tokenId, interval = '1h', from, to) {
-        const params = new URLSearchParams({ tokenId, interval });
-        if (from) params.append('from', from);
-        if (to) params.append('to', to);
-        return this.fetch(`/token/price-history?${params}`);
+    async getPriceHistory(tokenId, interval = '1h') {
+        const queryParams = new URLSearchParams({
+            token_id: tokenId,
+            interval
+        });
+        return this.fetchWithTimeout(
+            `${PROXY_API_BASE}/token/price-history?${queryParams}`
+        );
     }
 
     /**
-     * Search markets by title
+     * Search markets by query
      */
     async searchMarkets(query) {
-        const markets = await this.getMarkets({ limit: 20 });
+        // Get all markets and filter locally
+        const markets = await this.getMarkets({ limit: 50 });
+
+        if (!query) return markets;
+
         const lowerQuery = query.toLowerCase();
-        return markets.items.filter(m =>
-            m.title.toLowerCase().includes(lowerQuery)
-        );
+        return markets.filter(market => {
+            const title = (market.title || market.marketTitle || '').toLowerCase();
+            return title.includes(lowerQuery);
+        });
+    }
+
+    /**
+     * Test API key validity
+     */
+    async testApiKey(key) {
+        const originalKey = this.apiKey;
+        this.apiKey = key;
+
+        try {
+            await this.getMarkets({ limit: 1 });
+            return { valid: true };
+        } catch (error) {
+            return {
+                valid: false,
+                error: error.message
+            };
+        } finally {
+            this.apiKey = originalKey;
+        }
     }
 }
 
-export const apiClient = new APIClient();
+export const apiClient = new ApiClient();
 export default apiClient;
