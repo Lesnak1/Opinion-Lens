@@ -117,7 +117,7 @@ async function fetchMarkets() {
       type: MESSAGE_TYPES.GET_MARKETS,
       params: { limit: 50, status: 'activated' }
     });
-    return response?.items || response || [];
+    return Array.isArray(response) ? response : (response?.items || []);
   } catch (error) {
     console.error('[Opinion Lens] Failed to fetch markets:', error);
     return [];
@@ -224,11 +224,15 @@ class TweetObserver {
  * Create enhanced market card HTML
  */
 function createMarketCard(market, matchedKeywords) {
-  const yesPrice = market.tokens?.[0]?.lastPrice || market.yesPrice || 0.5;
-  const noPrice = market.tokens?.[1]?.lastPrice || market.noPrice || (1 - yesPrice);
-  const yesChange = market.tokens?.[0]?.change24h || 0;
-  const volume = market.volume24h || market.volume || 0;
+  const yesPrice = market.yesPrice || 0.5;
+  const noPrice = 1 - yesPrice;
+  // Change data not available in list response
+  const yesChange = 0;
+  const volume = parseFloat(market.volume24h) || 0;
   const yesPct = Math.round(yesPrice * 100);
+
+  const title = market.marketTitle || market.title || market.question || 'Untitled Market';
+  const endDate = market.cutoffAt ? new Date(market.cutoffAt * 1000).toISOString() : (market.resolutionDate || market.endDate);
 
   const changeClass = yesChange >= 0 ? 'positive' : 'negative';
   const changeSign = yesChange >= 0 ? '+' : '';
@@ -254,7 +258,7 @@ function createMarketCard(market, matchedKeywords) {
         </div>
       </div>
       
-      <div class="ol-title">${escapeHtml(market.title || market.question)}</div>
+      <div class="ol-title">${escapeHtml(title)}</div>
       
       <div class="ol-probability">
         <div class="ol-prob-bar">
@@ -280,7 +284,7 @@ function createMarketCard(market, matchedKeywords) {
       <div class="ol-footer">
         <div class="ol-meta">
           <span class="ol-volume">💰 ${formatNumber(volume)}</span>
-          <span class="ol-ends">⏰ ${formatRelativeDate(market.resolutionDate || market.endDate)}</span>
+          <span class="ol-ends">⏰ ${formatRelativeDate(endDate)}</span>
         </div>
         <div class="ol-actions">
           <button class="ol-action-btn ol-watchlist" title="Add to Watchlist">⭐</button>
@@ -781,8 +785,27 @@ async function processTweet(tweet) {
 
   console.log(`[Opinion Lens] Found ${matches.length} markets for tweet`);
 
+  // Fetch prices for top matches
+  const topMatches = matches.slice(0, CONFIG.maxMarketsPerTweet);
+
+  for (const match of topMatches) {
+    try {
+      if (match.market.yesTokenId) {
+        const priceData = await chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.GET_LATEST_PRICE,
+          tokenId: match.market.yesTokenId
+        });
+        if (priceData && priceData.price) {
+          match.market.yesPrice = parseFloat(priceData.price);
+        }
+      }
+    } catch (e) {
+      console.error('[Opinion Lens] Failed to fetch price for match:', match.market.id, e);
+    }
+  }
+
   // Inject cards
-  injectMarketCards(tweet, matches);
+  injectMarketCards(tweet, topMatches);
 }
 
 /**

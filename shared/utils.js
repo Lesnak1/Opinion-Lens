@@ -8,7 +8,9 @@
  * @returns {string}
  */
 export function formatPrice(price) {
-    return `${(price * 100).toFixed(1)}¢`;
+    const p = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(p)) return '0.0¢';
+    return `${(p * 100).toFixed(1)}¢`;
 }
 
 /**
@@ -40,13 +42,16 @@ export function formatPnL(value, isPercentage = false) {
  * @returns {string}
  */
 export function formatNumber(num) {
-    if (num >= 1_000_000) {
-        return `${(num / 1_000_000).toFixed(2)}M`;
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0.00';
+
+    if (n >= 1_000_000) {
+        return `${(n / 1_000_000).toFixed(2)}M`;
     }
-    if (num >= 1_000) {
-        return `${(num / 1_000).toFixed(1)}K`;
+    if (n >= 1_000) {
+        return `${(n / 1_000).toFixed(1)}K`;
     }
-    return num.toFixed(2);
+    return n.toFixed(2);
 }
 
 /**

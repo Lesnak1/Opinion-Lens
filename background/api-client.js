@@ -112,7 +112,8 @@ class ApiClient {
      * Get market details by ID
      */
     async getMarketDetails(marketId) {
-        return this.fetchWithTimeout(`${PROXY_API_BASE}/market/${marketId}`);
+        const result = await this.fetchWithTimeout(`${PROXY_API_BASE}/market/${marketId}`);
+        return result?.data || result;
     }
 
     /**

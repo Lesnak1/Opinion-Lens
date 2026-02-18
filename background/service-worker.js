@@ -174,9 +174,20 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             for (const marketId of watchlist) {
                 try {
                     const market = await apiClient.getMarketDetails(marketId);
-                    if (market?.tokens) {
+                    if (market) {
                         const prices = {};
-                        market.tokens.forEach(t => { prices[t.tokenId] = t.lastPrice; });
+                        if (market.yesTokenId) {
+                            try {
+                                const p = await apiClient.getLatestPrice(market.yesTokenId);
+                                if (p?.price) prices[market.yesTokenId] = parseFloat(p.price);
+                            } catch (e) { /* ignore */ }
+                        }
+                        if (market.noTokenId) {
+                            try {
+                                const p = await apiClient.getLatestPrice(market.noTokenId);
+                                if (p?.price) prices[market.noTokenId] = parseFloat(p.price);
+                            } catch (e) { /* ignore */ }
+                        }
                         await notificationService.checkAlerts(prices);
                     }
                 } catch (error) {
