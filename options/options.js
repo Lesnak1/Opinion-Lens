@@ -105,19 +105,16 @@ async function testConnection() {
     showConnectionResult('', null);
 
     try {
-        // Temporarily save API key for test
-        await storage.setApiKey(apiKey);
-
-        // Try to fetch markets
-        const response = await chrome.runtime.sendMessage({
-            type: MESSAGE_TYPES.GET_MARKETS,
-            params: { limit: 1 }
+        // Send TEST_API_KEY message to service worker
+        const result = await chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.TEST_API_KEY,
+            apiKey: apiKey
         });
 
-        if (response?.items) {
+        if (result?.valid) {
             showConnectionResult('✓ Connected successfully!', true);
         } else {
-            showConnectionResult('✗ Invalid response', false);
+            showConnectionResult(`✗ ${result?.error || 'Invalid API key'}`, false);
         }
     } catch (error) {
         showConnectionResult(`✗ ${error.message}`, false);
@@ -140,13 +137,12 @@ function showConnectionResult(message, success) {
  */
 async function saveSettings() {
     try {
-        // Save API key
+        // Save API key via service worker to update live client
         const apiKey = elements.apiKey.value.trim();
-        if (apiKey) {
-            await storage.setApiKey(apiKey);
-        } else {
-            await storage.removeApiKey();
-        }
+        await chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.SET_API_KEY,
+            apiKey: apiKey || null
+        });
 
         // Save settings
         const settings = {
