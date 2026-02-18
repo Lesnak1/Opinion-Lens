@@ -57,6 +57,7 @@
   "host_permissions": [
     "https://api.opinion.trade/*",
     "https://ws.opinion.trade/*",
+    "wss://ws.opinion.trade/*",
     "https://proxy.opinion.trade/*",
     "https://proxy.opinion.trade:8443/*"
   ],

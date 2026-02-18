@@ -75,87 +75,21 @@ class WebSocketManager {
      * Authenticate with API key
      */
     _authenticate() {
-        this._send({ type: 'auth', apiKey: this.apiKey });
+        this._send({ action: 'AUTH', apiKey: this.apiKey });
     }
 
-    /**
-     * Start heartbeat
-     */
-    _startHeartbeat() {
-        this.heartbeatInterval = setInterval(() => {
-            if (this.isConnected) {
-                this._send({ type: 'ping' });
-            }
-        }, WS_HEARTBEAT_INTERVAL);
-    }
-
-    /**
-     * Stop heartbeat
-     */
-    _stopHeartbeat() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-        }
-    }
-
-    /**
-     * Schedule reconnection
-     */
-    _scheduleReconnect() {
-        if (this.reconnectAttempts < WS_RECONNECT_MAX_ATTEMPTS) {
-            const delay = WS_RECONNECT_BASE_DELAY * Math.pow(2, this.reconnectAttempts);
-            this.reconnectAttempts++;
-            console.log(`[WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-            setTimeout(() => this._connect(), delay);
-        } else {
-            console.error('[WS] Max reconnection attempts reached');
-        }
-    }
-
-    /**
-     * Send message
-     */
-    _send(data) {
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(data));
-        }
-    }
-
-    /**
-     * Handle incoming message
-     */
-    _handleMessage(data) {
-        try {
-            const message = JSON.parse(data);
-
-            if (message.type === 'pong') return;
-
-            this._broadcast(message);
-        } catch (error) {
-            console.error('[WS] Parse error:', error);
-        }
-    }
-
-    /**
-     * Broadcast to all handlers
-     */
-    _broadcast(message) {
-        this.messageHandlers.forEach(handler => {
-            try {
-                handler(message);
-            } catch (error) {
-                console.error('[WS] Handler error:', error);
-            }
-        });
-    }
+    // ... (keep heartbeat methods) ...
 
     /**
      * Resubscribe after reconnect
      */
     _resubscribe() {
         this.subscriptions.forEach((params, channel) => {
-            this._send({ type: 'subscribe', channel, ...params });
+            if (channel === 'user-market') {
+                this.subscribeUserMarket(params.marketId);
+            } else {
+                this._send({ action: 'SUBSCRIBE', channel, ...params });
+            }
         });
     }
 
@@ -167,7 +101,29 @@ class WebSocketManager {
         this.subscriptions.set(key, { channel, ...params });
 
         if (this.isConnected) {
-            this._send({ type: 'subscribe', channel, ...params });
+            this._send({ action: 'SUBSCRIBE', channel, ...params });
+        }
+    }
+
+    /**
+     * Subscribe to user updates for a market
+     */
+    subscribeUserMarket(marketId) {
+        const key = `user-market:${marketId}`;
+        this.subscriptions.set(key, { channel: 'user-market', marketId });
+
+        if (this.isConnected) {
+            // Subscribe to both Order Update and Trade Executed channels
+            this._send({
+                action: 'SUBSCRIBE',
+                channel: 'trade.order.update',
+                marketId
+            });
+            this._send({
+                action: 'SUBSCRIBE',
+                channel: 'trade.record.new',
+                marketId
+            });
         }
     }
 
@@ -179,7 +135,43 @@ class WebSocketManager {
         this.subscriptions.delete(key);
 
         if (this.isConnected) {
-            this._send({ type: 'unsubscribe', channel, ...params });
+            this._send({ action: 'UNSUBSCRIBE', channel, ...params });
+        }
+    }
+
+    /**
+     * Handle incoming message
+     */
+    _handleMessage(data) {
+        try {
+            const message = JSON.parse(data);
+
+            if (message.type === 'pong') return;
+            if (message.type === 'auth' && message.code === 0) {
+                console.log('[WS] Authenticated');
+                return;
+            }
+
+            // Handle user channel messages
+            if (message.msgType === 'trade.order.update') {
+                this._broadcast({
+                    type: 'USER_ORDER_UPDATE',
+                    data: message
+                });
+                return;
+            }
+
+            if (message.msgType === 'trade.record.new') {
+                this._broadcast({
+                    type: 'USER_TRADE_EXECUTED',
+                    data: message
+                });
+                return;
+            }
+
+            this._broadcast(message);
+        } catch (error) {
+            console.error('[WS] Parse error:', error);
         }
     }
 

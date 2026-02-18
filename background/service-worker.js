@@ -56,6 +56,14 @@ function handleWSMessage(message) {
             broadcastToTabs({ type: MESSAGE_TYPES.MARKET_UPDATE, data: message.data });
             notificationService.notifyMarketEvent(message.data);
             break;
+
+        case 'USER_ORDER_UPDATE':
+            notificationService.notifyOrderUpdate(message.data);
+            break;
+
+        case 'USER_TRADE_EXECUTED':
+            notificationService.notifyTradeExecution(message.data);
+            break;
     }
 }
 
@@ -94,6 +102,13 @@ async function handleMessage(message, sender) {
         case MESSAGE_TYPES.SEARCH_MARKETS:
             return apiClient.searchMarkets(message.query);
 
+        case MESSAGE_TYPES.SUBSCRIBE_USER_MARKET:
+            if (wsManager.isConnected) {
+                wsManager.subscribeUserMarket(message.marketId);
+                return { success: true };
+            }
+            return { success: false, error: 'Not connected' };
+
         // Prices
         case MESSAGE_TYPES.GET_PRICES:
             return apiClient.getLatestPrice(message.tokenId);
@@ -109,6 +124,7 @@ async function handleMessage(message, sender) {
             const added = await storage.addToWatchlist(message.marketId);
             if (wsManager.isConnected) {
                 wsManager.subscribe('market:prices', { marketId: message.marketId });
+                wsManager.subscribeUserMarket(message.marketId);
             }
             return added;
 

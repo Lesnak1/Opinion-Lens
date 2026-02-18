@@ -104,6 +104,55 @@ class NotificationService {
     }
 
     /**
+     * Send order update notification
+     */
+    async notifyOrderUpdate(data) {
+        const settings = await storage.getSettings();
+        if (!settings.notifications.marketEvents) return; // Reusing marketEvents setting for now
+
+        const statusMap = {
+            1: 'Pending', 2: 'Filled', 3: 'Canceled', 4: 'Expired', 5: 'Failed'
+        };
+        const sideMap = { 1: 'Buy', 2: 'Sell' };
+        const outcomeMap = { 1: 'YES', 2: 'NO' };
+
+        const status = statusMap[data.status] || 'Updated';
+        const side = sideMap[data.side] || 'Order';
+        const outcome = outcomeMap[data.outcomeSide] || '';
+        const price = formatPrice(parseFloat(data.price));
+
+        await this._sendNotification({
+            title: `📋 Order ${status}`,
+            message: `${side} ${outcome} @ ${price}\nID: ${data.orderId.substring(0, 8)}...`,
+            data: { type: 'order_update', marketId: data.marketId }
+        });
+    }
+
+    /**
+     * Send trade execution notification
+     */
+    async notifyTradeExecution(data) {
+        const settings = await storage.getSettings();
+        if (!settings.notifications.marketEvents) return;
+
+        const side = data.side || 'Trade';
+        const outcome = data.outcomeSide === 1 ? 'YES' : (data.outcomeSide === 2 ? 'NO' : '');
+        const price = formatPrice(parseFloat(data.price));
+        const profit = parseFloat(data.profit);
+
+        let message = `${side} ${outcome} @ ${price}`;
+        if (profit !== 0) {
+            message += `\nProfit: ${formatPnL(profit)}`;
+        }
+
+        await this._sendNotification({
+            title: '⚡ Trade Executed',
+            message: message,
+            data: { type: 'trade_executed', marketId: data.marketId }
+        });
+    }
+
+    /**
      * Send browser notification
      */
     async _sendNotification({ title, message, data }) {
