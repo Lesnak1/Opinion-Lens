@@ -74,8 +74,8 @@ class ApiClient {
 
             const data = await response.json();
 
-            if (data.code !== 0) {
-                throw new Error(data.msg || 'API_ERROR');
+            if (data.errno !== 0) {
+                throw new Error(data.errmsg || 'API_ERROR');
             }
 
             return data.result;

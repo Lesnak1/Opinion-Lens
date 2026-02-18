@@ -98,6 +98,9 @@ async function handleMessage(message, sender) {
         case MESSAGE_TYPES.GET_PRICES:
             return apiClient.getLatestPrice(message.tokenId);
 
+        case MESSAGE_TYPES.GET_LATEST_PRICE:
+            return apiClient.getLatestPrice(message.tokenId);
+
         // Watchlist
         case MESSAGE_TYPES.GET_WATCHLIST:
             return storage.getWatchlist();

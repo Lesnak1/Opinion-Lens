@@ -168,12 +168,15 @@ async function loadMarkets() {
             params: { limit: TRENDING_MARKETS_COUNT, sortBy: 5 }
         });
 
-        if (markets.error) {
+        if (markets?.error) {
             throw new Error(markets.error);
         }
 
-        state.markets = markets || [];
+        state.markets = Array.isArray(markets) ? markets : [];
         renderTrendingMarkets();
+
+        // Lazy-load prices for each market
+        loadMarketPrices();
     } catch (error) {
         console.error('Failed to load markets:', error);
 
@@ -189,6 +192,37 @@ async function loadMarkets() {
                     <button class="btn-retry" onclick="location.reload()">Retry</button>
                 </div>
             `;
+        }
+    }
+}
+
+/**
+ * Lazy-load prices for displayed markets
+ */
+async function loadMarketPrices() {
+    for (const market of state.markets) {
+        const yesTokenId = market.yesTokenId;
+        if (!yesTokenId) continue;
+
+        try {
+            const priceData = await sendMessage(MESSAGE_TYPES.GET_LATEST_PRICE, { tokenId: yesTokenId });
+            if (priceData && priceData.price) {
+                const yesPrice = parseFloat(priceData.price);
+                const noPrice = 1 - yesPrice;
+                const card = document.querySelector(`[data-market-id="${market.marketId}"]`);
+                if (card) {
+                    const yesFill = card.querySelector('.price-bar.yes .price-bar-fill');
+                    const noFill = card.querySelector('.price-bar.no .price-bar-fill');
+                    const yesLabel = card.querySelector('.price-label.yes span:last-child');
+                    const noLabel = card.querySelector('.price-label.no span:last-child');
+                    if (yesFill) yesFill.style.width = `${yesPrice * 100}%`;
+                    if (noFill) noFill.style.width = `${noPrice * 100}%`;
+                    if (yesLabel) yesLabel.textContent = formatPrice(yesPrice);
+                    if (noLabel) noLabel.textContent = formatPrice(noPrice);
+                }
+            }
+        } catch (e) {
+            // Non-critical - price will show default
         }
     }
 }
@@ -276,17 +310,15 @@ async function renderWatchlist() {
  */
 function renderMarketCard(market, isWatched) {
     const marketId = market.marketId || market.id;
-    const title = market.title || market.marketTitle;
+    const title = market.marketTitle || market.title || 'Untitled Market';
 
-    // Get prices from tokens array
-    let yesPrice = 0.5, noPrice = 0.5;
-    if (market.tokens && market.tokens.length >= 2) {
-        yesPrice = parseFloat(market.tokens[0]?.lastPrice) || 0.5;
-        noPrice = parseFloat(market.tokens[1]?.lastPrice) || 0.5;
-    }
+    // Default prices (will be updated by loadMarketPrices)
+    const yesPrice = 0.5;
+    const noPrice = 0.5;
 
-    const volume = market.volume24h || 0;
-    const endDate = market.resolutionDate || market.endDate;
+    const volume = parseFloat(market.volume24h) || 0;
+    // cutoffAt is a unix timestamp in seconds
+    const endDate = market.cutoffAt ? new Date(market.cutoffAt * 1000).toISOString() : null;
 
     return `
         <div class="market-card" data-market-id="${marketId}">
