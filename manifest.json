@@ -24,15 +24,28 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://twitter.com/*", "https://x.com/*"],
-      "js": ["content/twitter-injector.js"],
-      "css": ["content/twitter-styles.css"],
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ],
+      "js": [
+        "content/twitter-injector.js"
+      ],
+      "css": [
+        "content/twitter-styles.css"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://app.opinion.trade/*"],
-      "js": ["content/opinion-injector.js"],
-      "css": ["content/opinion-styles.css"],
+      "matches": [
+        "https://app.opinion.trade/*"
+      ],
+      "js": [
+        "content/opinion-injector.js"
+      ],
+      "css": [
+        "content/opinion-styles.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -43,13 +56,21 @@
   ],
   "host_permissions": [
     "https://api.opinion.trade/*",
-    "https://ws.opinion.trade/*"
+    "https://ws.opinion.trade/*",
+    "https://proxy.opinion.trade/*",
+    "https://proxy.opinion.trade:8443/*"
   ],
   "options_page": "options/options.html",
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
-      "matches": ["https://twitter.com/*", "https://x.com/*", "https://app.opinion.trade/*"]
+      "resources": [
+        "assets/*"
+      ],
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*",
+        "https://app.opinion.trade/*"
+      ]
     }
   ]
 }

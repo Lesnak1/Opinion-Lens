@@ -56,7 +56,9 @@
     ],
     "host_permissions": [
         "https://api.opinion.trade/*",
-        "https://ws.opinion.trade/*"
+        "https://ws.opinion.trade/*",
+        "https://proxy.opinion.trade/*",
+        "https://proxy.opinion.trade:8443/*"
     ],
     "options_page": "options/options.html",
     "web_accessible_resources": [
