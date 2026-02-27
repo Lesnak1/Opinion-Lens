@@ -54,10 +54,39 @@ class MarketIndex {
   extractKeywords(title) {
     const keywords = new Set();
     const stopWords = new Set([
+      // General English stop words
       'will', 'the', 'be', 'to', 'of', 'and', 'a', 'in', 'is', 'are', 'was', 'has', 'have',
       'before', 'after', 'by', 'for', 'on', 'at', 'or', 'an', 'if', 'than', 'then', 'who',
-      'what', 'when', 'where', 'why', 'how', 'do', 'does', 'did', 'vs', 'v'
+      'what', 'when', 'where', 'why', 'how', 'do', 'does', 'did', 'vs', 'v', 'not', 'no',
+      'yes', 'all', 'any', 'can', 'could', 'would', 'should', 'may', 'might', 'its', 'it',
+      'this', 'that', 'these', 'those', 'more', 'most', 'some', 'just', 'new', 'next',
+      'first', 'last', 'end', 'over', 'under', 'up', 'down', 'out',
+      // Prediction-market domain stop words (too generic — appear in almost every crypto/trading tweet)
+      'market', 'markets', 'trade', 'trades', 'trading', 'prediction', 'predictions',
+      'predict', 'opinion', 'opinions', 'price', 'prices', 'winning', 'winner',
+      'bet', 'bets', 'betting', 'odds', 'dropped', 'drops', 'drop', 'launch', 'launched',
+      'token', 'tokens', 'coin', 'coins', 'crypto', 'blockchain', 'chain', 'defi',
+      'airdrop', 'trending', 'volume', 'bull', 'bear', 'bullish', 'bearish',
+      'long', 'short', 'buy', 'sell', 'pump', 'dump', 'moon', 'dip',
+      'live', 'soon', 'coming', 'today', 'tomorrow', 'week', 'month', 'year',
+      'daily', 'hourly', 'rate', 'decision', 'find', 'finds', 'found'
     ]);
+
+    // Ticker ↔ Name aliases for cross-matching (tweet says "ETH", market says "Ethereum")
+    const tickerAliases = {
+      'bitcoin': 'btc', 'btc': 'bitcoin',
+      'ethereum': 'eth', 'eth': 'ethereum',
+      'solana': 'sol', 'sol': 'solana',
+      'cardano': 'ada', 'ada': 'cardano',
+      'polkadot': 'dot', 'dot': 'polkadot',
+      'avalanche': 'avax', 'avax': 'avalanche',
+      'chainlink': 'link', 'link': 'chainlink',
+      'polygon': 'matic', 'matic': 'polygon',
+      'dogecoin': 'doge', 'doge': 'dogecoin',
+      'ripple': 'xrp', 'xrp': 'ripple',
+      'litecoin': 'ltc', 'ltc': 'litecoin',
+      'binance': 'bnb', 'bnb': 'binance',
+    };
 
     // Enhanced regex to remove special chars but keep hyphens and apostrophes for names
     const cleanTitle = title.toLowerCase().replace(/[?!.,;:"()[\]{}$%]/g, ' ');
@@ -71,35 +100,47 @@ class MarketIndex {
     // We filter entities to only those that actually start with a capital letter in the original text, to catch proper nouns
     const properNouns = title.match(/\b[A-Z][a-z0-9]+\b(?:\s+[A-Z][a-z0-9]+\b)*/g) || [];
     properNouns.forEach(e => {
-      if (e.length > 2) keywords.add(e.toLowerCase());
+      const lower = e.toLowerCase();
+      if (e.length > 2 && !stopWords.has(lower)) keywords.add(lower);
     });
 
-    // 3. Extract common acronyms / tickers / short team names (e.g. BTC, ETH, USA, G2, T1)
-    const acronyms = title.match(/\b[A-Z0-9]{2,5}\b/g) || [];
-    acronyms.forEach(t => keywords.add(t.toLowerCase()));
+    // 3. Extract acronyms / tickers / short team names (e.g. BTC, ETH, USA, G2, T1)
+    // Also catch mixed-case like LoL, NaVi, DeFi — any 2-5 char word with at least one uppercase
+    const acronyms = title.match(/\b[A-Z][A-Za-z0-9]{1,4}\b/g) || [];
+    acronyms.forEach(t => {
+      const lower = t.toLowerCase();
+      if (!stopWords.has(lower) && lower.length >= 2) keywords.add(lower);
+    });
 
     // 4. Extract Multi-word Contexts (Targeting versus matches like "NaVi vs Faze" or "US vs Iran")
-    // If the title contains "vs", we want to ensure the combatants are extracted clearly
     const vsMatch = cleanTitle.split(/\s+vs\s+|\s+v\s+/);
     if (vsMatch.length > 1) {
       vsMatch.forEach(part => {
         const partWords = part.trim().split(/\s+/);
         if (partWords.length > 0 && partWords[0].length > 1) {
-          keywords.add(partWords[partWords.length - 1]); // the word right before/after vs
+          const word = partWords[partWords.length - 1]; // the word right before/after vs
+          if (!stopWords.has(word)) keywords.add(word);
         }
       });
     }
 
     // 5. Extract numbers with strong context (like "$10", "100k", "2024")
-    // Ignore plain 1-3 digit numbers as they cause massive false positives
     const numbers = title.match(/(?:\$|€|£)\d+(?:[,.]\d+)?[kKmMbB]?|\b\d+(?:[,.]\d+)?[kKmMbB]\b|\b(?:19|20)\d{2}\b/g) || [];
     numbers.forEach(n => keywords.add(n.toLowerCase()));
+
+    // 6. Add ticker aliases (if market says "Ethereum", also index "eth" and vice versa)
+    const currentKeywords = [...keywords];
+    for (const kw of currentKeywords) {
+      if (tickerAliases[kw]) {
+        keywords.add(tickerAliases[kw]);
+      }
+    }
 
     return Array.from(keywords);
   }
 
   findMatches(text) {
-    // 1. Hard Check: Did they post the actual Opinion.trade URL?
+    // 1. Hard Check: Did they post the actual Opinion.trade URL with a topicId?
     const urlMatch = text.match(/topicId=(\d+)/);
     if (urlMatch) {
       const targetTopicId = parseInt(urlMatch[1], 10);
@@ -107,6 +148,21 @@ class MarketIndex {
         const exact = markets.find(m => m.id === targetTopicId || m.topicId === targetTopicId || m.marketId === targetTopicId);
         if (exact) {
           return [{ market: exact, score: 999, keywords: ['URL_MATCH'] }];
+        }
+      }
+    }
+
+    // 2. Check for Opinion market slug URL (e.g. app.opinion.trade/market/sebi-finds-...)
+    const slugMatch = text.match(/app\.opinion\.trade\/market\/([a-z0-9\-]+)/i);
+    if (slugMatch) {
+      const slug = slugMatch[1].toLowerCase();
+      // Try to match slug words against market titles
+      const slugWords = slug.split('-').filter(w => w.length > 2);
+      for (const market of this.markets) {
+        const title = (market.marketTitle || market.title || '').toLowerCase();
+        const matchCount = slugWords.filter(w => title.includes(w)).length;
+        if (matchCount >= 3) {
+          return [{ market, score: 998, keywords: ['SLUG_MATCH'] }];
         }
       }
     }
@@ -135,9 +191,10 @@ class MarketIndex {
       }
     }
 
-    // Filter out weak matches (require at least score of 2, OR a very strong single keyword > 5 chars)
+    // STRICT filter: require at least 2 distinct keyword matches to avoid false positives
+    // Single-keyword matches cause too much noise (e.g. "markets" matching unrelated tweets)
     return Array.from(matches.values())
-      .filter(m => m.score >= 2 || (m.score === 1 && m.keywords[0].length >= 5))
+      .filter(m => m.score >= 2)
       .sort((a, b) => b.score - a.score)
       .slice(0, CONFIG.maxMarketsPerTweet);
   }
