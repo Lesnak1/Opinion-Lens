@@ -175,11 +175,54 @@ class ApiClient {
     }
 
     /**
-     * Get market details by ID
+     * Get market details by ID (with public fallback)
      */
     async getMarketDetails(marketId) {
-        const result = await this.fetchWithTimeout(`${PROXY_API_BASE}/market/${marketId}`);
-        return result?.data || result;
+        // Try authenticated endpoint first
+        if (this.apiKey) {
+            try {
+                const result = await this.fetchWithTimeout(`${PROXY_API_BASE}/market/${marketId}`);
+                if (result?.data || result) return result?.data || result;
+            } catch (e) {
+                // Fall through to public endpoint
+            }
+        }
+
+        // Public fallback: no API key required
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+            const response = await fetch(`https://app.opinion.trade/api/topic/${marketId}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) return null;
+            const data = await response.json();
+            // Map public API fields to our expected format
+            if (data) {
+                return {
+                    marketId: data.id || data.topicId || marketId,
+                    title: data.title || data.topicTitle || '',
+                    marketTitle: data.title || data.topicTitle || '',
+                    yesTokenId: data.yesPos || data.yesTokenId || '',
+                    noTokenId: data.noPos || data.noTokenId || '',
+                    yesLabel: data.yesLabel || 'YES',
+                    noLabel: data.noLabel || 'NO',
+                    yesPrice: parseFloat(data.yesMarketPrice || data.yesBuyPrice || 0.5),
+                    noPrice: parseFloat(data.noMarketPrice || data.noBuyPrice || 0.5),
+                    slug: data.slug || '',
+                    thumbnailUrl: data.thumbnailUrl || '',
+                    childList: data.childList || [],
+                    volume24h: data.volume24h || data.volume || 0,
+                    cutoffAt: data.cutoffTime || data.cutoffAt || 0,
+                    status: data.status,
+                };
+            }
+            return null;
+        } catch (e) {
+            console.warn(`[Opinion Lens] Public fallback for market ${marketId} also failed`);
+            return null;
+        }
     }
 
     /**
