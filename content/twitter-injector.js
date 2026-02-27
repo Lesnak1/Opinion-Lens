@@ -69,7 +69,20 @@ class MarketIndex {
       'airdrop', 'trending', 'volume', 'bull', 'bear', 'bullish', 'bearish',
       'long', 'short', 'buy', 'sell', 'pump', 'dump', 'moon', 'dip',
       'live', 'soon', 'coming', 'today', 'tomorrow', 'week', 'month', 'year',
-      'daily', 'hourly', 'rate', 'decision', 'find', 'finds', 'found'
+      'daily', 'hourly', 'rate', 'decision', 'find', 'finds', 'found',
+      // Month names (cause false matches between unrelated time-bound markets)
+      'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+      'january', 'february', 'march', 'april', 'june', 'july', 'august',
+      'september', 'october', 'november', 'december',
+      // Timezone abbreviations (cause false matches: "ET" in both tweets and market titles)
+      'et', 'pt', 'ct', 'mt', 'est', 'pst', 'cst', 'mst', 'cet', 'gmt', 'utc',
+      'am', 'pm', 'noon', 'midnight',
+      // Day names
+      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+      'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun',
+      // Very common trading/esports context words
+      'closing', 'close', 'open', 'opening', 'right', 'now', 'breaking', 'update',
+      'call', 'calls', 'make', 'set', 'get', 'got', 'let', 'go', 'going'
     ]);
 
     // Ticker ↔ Name aliases for cross-matching (tweet says "ETH", market says "Ethereum")
@@ -144,12 +157,16 @@ class MarketIndex {
     const urlMatch = text.match(/topicId=(\d+)/);
     if (urlMatch) {
       const targetTopicId = parseInt(urlMatch[1], 10);
+      // Search local index first
       for (const markets of this.keywordMap.values()) {
         const exact = markets.find(m => m.id === targetTopicId || m.topicId === targetTopicId || m.marketId === targetTopicId);
         if (exact) {
           return [{ market: exact, score: 999, keywords: ['URL_MATCH'] }];
         }
       }
+      // Market not in local index — return special marker for API fetch
+      // This prevents falling through to keyword matching with wrong results
+      return [{ market: { marketId: targetTopicId, _needsFetch: true }, score: 999, keywords: ['URL_FETCH'] }];
     }
 
     // 2. Check for Opinion market slug URL (e.g. app.opinion.trade/market/sebi-finds-...)
@@ -776,17 +793,46 @@ async function processTweet(tweet) {
   for (const match of topMatches) {
     try {
       const mId = match.market.marketId || match.market.id;
-      // Fetch details first to ensure we have yesTokenId
-      const details = await chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.GET_MARKET_DETAILS,
-        marketId: mId // pass marketId explicitly
-      });
 
-      if (details && !details.error) {
-        // Merge details into market object (to get yesTokenId, volume24h, etc)
-        Object.assign(match.market, details);
+      // If this is a URL_FETCH marker (market not in local index), fetch from API directly
+      if (match.market._needsFetch) {
+        console.log(`[Opinion Lens] URL match: fetching market ${mId} from API (not in local index)`);
+        const details = await chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.GET_MARKET_DETAILS,
+          marketId: mId
+        });
+        if (details && !details.error) {
+          // Replace the placeholder with real market data
+          match.market = {
+            marketId: mId,
+            title: details.title || details.marketTitle || details.topicTitle,
+            marketTitle: details.title || details.marketTitle || details.topicTitle,
+            yesTokenId: details.yesPos || details.yesTokenId || '',
+            noTokenId: details.noPos || details.noTokenId || '',
+            yesLabel: details.yesLabel || 'YES',
+            noLabel: details.noLabel || 'NO',
+            yesPrice: parseFloat(details.yesMarketPrice || details.yesBuyPrice || 0.5),
+            noPrice: parseFloat(details.noMarketPrice || details.noBuyPrice || 0.5),
+            slug: details.slug || '',
+            thumbnailUrl: details.thumbnailUrl || '',
+            childList: details.childList || [],
+          };
+        } else {
+          console.warn(`[Opinion Lens] Could not fetch market ${mId} from API`);
+          continue; // Skip this match if API fetch fails
+        }
+      } else {
+        // Normal match: fetch details to ensure we have yesTokenId
+        const details = await chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.GET_MARKET_DETAILS,
+          marketId: mId
+        });
+        if (details && !details.error) {
+          Object.assign(match.market, details);
+        }
       }
 
+      // Fetch latest price
       if (match.market.yesTokenId) {
         const priceData = await chrome.runtime.sendMessage({
           type: MESSAGE_TYPES.GET_LATEST_PRICE,
@@ -801,8 +847,15 @@ async function processTweet(tweet) {
     }
   }
 
+  // Filter out any matches that failed to fetch
+  const validMatches = topMatches.filter(m => !m.market._needsFetch);
+  if (validMatches.length === 0) {
+    tweet.setAttribute(CONFIG.statusAttr, 'no-match');
+    return;
+  }
+
   // Inject cards
-  injectMarketCards(tweet, topMatches);
+  injectMarketCards(tweet, validMatches);
   tweet.setAttribute(CONFIG.statusAttr, 'has-emblem');
 }
 
