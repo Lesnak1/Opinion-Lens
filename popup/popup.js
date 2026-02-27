@@ -550,6 +550,13 @@ function switchTab(tab) {
     const footer = document.querySelector('.footer');
     if (searchContainer) searchContainer.style.display = tab === 'about' ? 'none' : '';
     if (footer) footer.style.display = tab === 'about' ? 'none' : '';
+
+    // Reload data when switching to specific tabs
+    if (tab === 'watchlist') {
+        loadWatchlist(); // Always refresh from storage so newly starred markets appear
+    } else if (tab === 'new') {
+        renderNewMarkets(); // Re-render in case data was updated
+    }
 }
 
 /**
