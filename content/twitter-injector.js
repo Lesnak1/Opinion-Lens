@@ -23,6 +23,27 @@ let indexLastUpdate = 0;
 // Processed tweets cache
 const processedTweets = new WeakSet();
 
+// Context validity flag — when extension is updated/reloaded, content scripts lose connection
+let contextInvalidated = false;
+
+/**
+ * Check if extension context is still valid (not invalidated by update/reload)
+ */
+function isContextValid() {
+  if (contextInvalidated) return false;
+  try {
+    if (!chrome.runtime?.id) {
+      contextInvalidated = true;
+      console.warn('[Opinion Lens] Extension context invalidated — stopping.');
+      return false;
+    }
+    return true;
+  } catch {
+    contextInvalidated = true;
+    return false;
+  }
+}
+
 /**
  * Market Index - Synced from background
  */
@@ -221,13 +242,18 @@ class MarketIndex {
  * Fetch markets from background service
  */
 async function fetchMarkets() {
+  if (!isContextValid()) return [];
   try {
     const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.GET_MARKETS,
-      params: { limit: 20, status: 'activated', sortBy: 5 } // Pull markets for the Twitter Index, sorting by popularity
+      params: { limit: 20, status: 'activated', sortBy: 5 }
     });
     return Array.isArray(response) ? response : (response?.items || []);
   } catch (error) {
+    if (error.message?.includes('Extension context invalidated')) {
+      contextInvalidated = true;
+      return [];
+    }
     console.error('[Opinion Lens] Failed to fetch markets:', error);
     return [];
   }
@@ -765,6 +791,9 @@ async function processTweet(tweet) {
   const text = tweetTextNode.textContent || '';
   if (text.length < 10) return; // Skip very short tweets
 
+  // Check context validity before processing
+  if (!isContextValid()) return;
+
   // Mark as processing and save text hash (first 100 chars) to detect virtual DOM recycling
   const shortText = text.substring(0, 100);
   tweet.setAttribute(CONFIG.statusAttr, 'processing');
@@ -843,6 +872,10 @@ async function processTweet(tweet) {
         }
       }
     } catch (e) {
+      if (e.message?.includes('Extension context invalidated')) {
+        contextInvalidated = true;
+        return; // Stop processing entirely
+      }
       console.error('[Opinion Lens] Failed to fetch data for match:', match.market.marketId || match.market.id, e);
     }
   }
