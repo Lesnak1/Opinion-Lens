@@ -186,7 +186,7 @@ class NotificationService {
 
         if (data?.marketId) {
             await chrome.tabs.create({
-                url: `https://app.opinion.trade/market/${data.marketId}`
+                url: `https://app.opinion.trade/detail?topicId=${data.marketId}`
             });
         } else if (data?.type === 'portfolio_update') {
             await chrome.tabs.create({

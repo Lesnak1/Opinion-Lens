@@ -76,19 +76,19 @@ class MarketIndexer {
         let cleaned = title
             .toLowerCase()
             .replace(/[?!.,;:'"()[\]{}]/g, ' ')
-            .replace(/\$[\d,]+k?/gi, match => {
+            .replace(/\$[\d,]+[kKmMbB]?/gi, match => {
                 // Keep price targets as keywords
                 keywords.add(match.replace(/,/g, ''));
                 return ' ';
             })
-            .replace(/\d{4}/g, match => {
+            .replace(/\b(?:19|20)\d{2}\b/g, match => {
                 // Keep years as keywords
                 keywords.add(match);
                 return ' ';
             });
 
-        // Split into words
-        const words = cleaned.split(/\s+/).filter(w => w.length > 1);
+        // Split into words, skipping pure numbers shorter than 4 digits (avoids false positive on generic "1", "3", "10")
+        const words = cleaned.split(/\s+/).filter(w => w.length > 1 && !/^\d{1,3}$/.test(w));
 
         // Process each word
         for (const word of words) {
@@ -155,6 +155,16 @@ class MarketIndexer {
      * @returns {Array} - Matching markets with relevance scores
      */
     findMatchingMarkets(text) {
+        // 1. Hard Check: Did they post the actual Opinion.trade URL?
+        const urlMatch = text.match(/topicId=(\d+)/);
+        if (urlMatch) {
+            const topicId = parseInt(urlMatch[1], 10);
+            const exactMarket = this.markets.find(m => m.id === topicId || m.topicId === topicId || m.marketId === topicId);
+            if (exactMarket) {
+                return [{ market: exactMarket, score: 999, matchedKeywords: ['URL_MATCH'] }];
+            }
+        }
+
         const matches = new Map(); // marketId -> { market, score, matchedKeywords }
 
         // Normalize text
@@ -193,8 +203,10 @@ class MarketIndexer {
             }
         }
 
+        // Filter out weak matches (require at least score of 2)
         // Sort by score and return top matches
         return Array.from(matches.values())
+            .filter(match => match.score >= 2 || (match.score === 1 && match.matchedKeywords[0].length >= 5))
             .sort((a, b) => b.score - a.score)
             .slice(0, 5); // Max 5 markets per tweet
     }
@@ -234,7 +246,9 @@ class MarketIndexer {
      * Get trade URL for market
      */
     getTradeUrl(market, side = 'yes') {
-        return `${OPINION_APP_URL}/market/${market.id}?side=${side}`;
+        const isMulti = !!(market.childList?.length > 0) || (!market.yesTokenId && !market.yesLabel);
+        const baseUrl = `${OPINION_APP_URL}/detail?topicId=${market.id}`;
+        return isMulti ? `${baseUrl}&type=multi&side=${side}` : `${baseUrl}&side=${side}`;
     }
 
     /**

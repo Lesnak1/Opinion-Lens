@@ -116,6 +116,12 @@ async function handleMessage(message, sender) {
         case MESSAGE_TYPES.GET_LATEST_PRICE:
             return apiClient.getLatestPrice(message.tokenId);
 
+        // Portfolio
+        case MESSAGE_TYPES.GET_USER_POSITIONS:
+            const wallet = await storage.getWalletAddress();
+            if (!wallet) return { error: 'Wallet address required' };
+            return apiClient.getUserPositions(wallet, message.params);
+
         // Watchlist
         case MESSAGE_TYPES.GET_WATCHLIST:
             return storage.getWatchlist();
@@ -204,10 +210,16 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
                                 if (p?.price) prices[market.noTokenId] = parseFloat(p.price);
                             } catch (e) { /* ignore */ }
                         }
-                        await notificationService.checkAlerts(prices);
+
+                        if (Object.keys(prices).length > 0) {
+                            await notificationService.checkAlerts(prices);
+                        }
                     }
                 } catch (error) {
-                    console.error('[Alarm] Failed to check market:', marketId, error);
+                    // Suppress network IO suspended or 404 errors from spamming the alarm logs
+                    if (!error.message?.includes('Network Error') && !error.message?.includes('Failed to fetch')) {
+                        console.error('[Alarm] Failed to check market:', marketId, error);
+                    }
                 }
             }
         }

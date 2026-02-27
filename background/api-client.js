@@ -42,9 +42,6 @@ class ApiClient {
      * Fetch with timeout and error handling
      */
     async fetchWithTimeout(url, options = {}) {
-        if (!this.apiKey) {
-            throw new Error('API_KEY_REQUIRED');
-        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -74,11 +71,15 @@ class ApiClient {
 
             const data = await response.json();
 
-            if (data.errno !== 0) {
-                throw new Error(data.errmsg || 'API_ERROR');
+            if (data.errno !== 0 && data.code !== 0) {
+                // Opinion API usually uses errno=0 or code=0. 
+                // If BOTH are not 0, it's an error. But if errno is undefined and code is undefined, don't fail just yet.
+                if (data.errno !== undefined || data.code !== undefined) {
+                    throw new Error(data.errmsg || data.msg || data.message || 'API_ERROR');
+                }
             }
 
-            return data.result;
+            return data.result !== undefined ? data.result : (data.data !== undefined ? data.data : data);
         } catch (error) {
             clearTimeout(timeoutId);
 
@@ -94,18 +95,83 @@ class ApiClient {
      */
     async getMarkets(params = {}) {
         const { page = 1, limit = 20, status = 'activated', sortBy = 5 } = params;
-        const queryParams = new URLSearchParams({
-            page: String(page),
-            limit: String(limit),
-            status,
-            sortBy: String(sortBy)
-        });
 
-        const result = await this.fetchWithTimeout(
-            `${PROXY_API_BASE}/market?${queryParams}`
-        );
+        // ── Authenticated path: use the official /openapi/market endpoint ──
+        if (this.apiKey) {
+            // API docs: sort=1(new), 2(ending soon), 3(vol desc), 5(vol24h desc)
+            // API docs: status=activated or resolved, limit max=20
+            const queryParams = new URLSearchParams({
+                page: String(page),
+                limit: String(Math.min(limit, 20)),
+                status,
+                sort: String(sortBy)
+            });
 
-        return result?.list || [];
+            const result = await this.fetchWithTimeout(
+                `${PROXY_API_BASE}/market?${queryParams}`
+            );
+
+            return result?.list || [];
+        }
+
+        // ── Public fallback: fetch multiple pages from /topic, filter client-side ──
+        try {
+            // Fetch 5 pages of 20 to get a large pool of markets
+            const allMarkets = [];
+            for (let p = 1; p <= 5; p++) {
+                try {
+                    const pageResult = await this.fetchWithTimeout(
+                        `https://proxy.opinion.trade:8443/api/bsc/api/v2/topic?limit=20&sortBy=1&page=${p}`
+                    );
+                    const pageList = pageResult?.list || pageResult?.result?.list || [];
+                    allMarkets.push(...pageList);
+                    if (pageList.length < 20) break; // No more pages
+                } catch {
+                    break; // Stop if a page fails
+                }
+            }
+
+            const now = Math.floor(Date.now() / 1000);
+
+            // Only keep ACTIVE markets (status === 2 AND cutoff in the future)
+            const activeMarkets = allMarkets.filter(m =>
+                m.status === 2 && (!m.cutoffTime || m.cutoffTime > now)
+            );
+
+            // Map to our internal format
+            const mapped = activeMarkets.map(m => ({
+                marketId: m.topicId,
+                title: m.title || m.topicTitle,
+                yesTokenId: m.yesPos || '',
+                noTokenId: m.noPos || '',
+                yesLabel: m.yesLabel || 'YES',
+                noLabel: m.noLabel || 'NO',
+                volume24h: parseFloat(m.volume24h || 0),
+                totalVolume: parseFloat(m.volume || 0),
+                cutoffAt: m.cutoffTime || null,
+                createTime: m.createTime || 0,
+                yesPrice: parseFloat(m.yesMarketPrice || m.yesBuyPrice || 0.5),
+                noPrice: parseFloat(m.noBuyPrice || 0),
+                slug: m.slug || '',
+                thumbnailUrl: m.thumbnailUrl || '',
+                labelName: m.labelName || []
+            }));
+
+            // Sort based on the caller's request
+            if (sortBy === 1) {
+                // New Markets: sort by creation time descending (newest first)
+                mapped.sort((a, b) => b.createTime - a.createTime);
+            } else {
+                // Trending: sort by total volume descending (highest volume = most trending)
+                mapped.sort((a, b) => b.totalVolume - a.totalVolume);
+            }
+
+            // Return requested limit
+            return mapped.slice(0, limit);
+        } catch (err) {
+            console.warn('Public markets fallback failed:', err);
+            return [];
+        }
     }
 
     /**
@@ -120,6 +186,8 @@ class ApiClient {
      * Get latest token price
      */
     async getLatestPrice(tokenId) {
+        if (!this.apiKey) return null; // Public users rely on initial activity list price
+
         const queryParams = new URLSearchParams({ token_id: tokenId });
         return this.fetchWithTimeout(
             `${PROXY_API_BASE}/token/latest-price?${queryParams}`
@@ -163,6 +231,28 @@ class ApiClient {
             const title = (market.title || market.marketTitle || '').toLowerCase();
             return title.includes(lowerQuery);
         });
+    }
+
+    /**
+     * Get user positions
+     */
+    async getUserPositions(walletAddress, params = {}) {
+        if (!this.apiKey) {
+            throw new Error('API_KEY_REQUIRED');
+        }
+        if (!walletAddress) throw new Error('Wallet address required');
+
+        const { page = 1, pageSize = 50 } = params;
+        const queryParams = new URLSearchParams({
+            page: String(page),
+            pageSize: String(pageSize)
+        });
+
+        const result = await this.fetchWithTimeout(
+            `${PROXY_API_BASE}/positions/user/${walletAddress}?${queryParams}`
+        );
+
+        return result?.list || [];
     }
 
     /**

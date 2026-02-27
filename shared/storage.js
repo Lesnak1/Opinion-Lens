@@ -33,22 +33,50 @@ function decrypt(encoded) {
  */
 class StorageManager {
     /**
-     * Get API key from storage (decrypted)
-     * @returns {Promise<string|null>}
+     * Get API key
      */
     async getApiKey() {
         const result = await chrome.storage.local.get(STORAGE_KEYS.API_KEY);
         const encrypted = result[STORAGE_KEYS.API_KEY];
-        return encrypted ? decrypt(encrypted) : null;
+        if (!encrypted) return null;
+        try {
+            return decrypt(encrypted);
+        } catch {
+            return null; // Handle corrupted/old encryption
+        }
     }
 
     /**
-     * Set API key (encrypted)
-     * @param {string} apiKey
+     * Set API key
      */
-    async setApiKey(apiKey) {
-        const encrypted = encrypt(apiKey);
+    async setApiKey(key) {
+        if (!key) {
+            await chrome.storage.local.remove(STORAGE_KEYS.API_KEY);
+            return true;
+        }
+        const encrypted = encrypt(key);
         await chrome.storage.local.set({ [STORAGE_KEYS.API_KEY]: encrypted });
+        return true;
+    }
+
+    /**
+     * Get Wallet Address
+     */
+    async getWalletAddress() {
+        const result = await chrome.storage.local.get(STORAGE_KEYS.WALLET_ADDRESS);
+        return result[STORAGE_KEYS.WALLET_ADDRESS] || null;
+    }
+
+    /**
+     * Set Wallet Address
+     */
+    async setWalletAddress(address) {
+        if (!address) {
+            await chrome.storage.local.remove(STORAGE_KEYS.WALLET_ADDRESS);
+            return true;
+        }
+        await chrome.storage.local.set({ [STORAGE_KEYS.WALLET_ADDRESS]: address });
+        return true;
     }
 
     /**

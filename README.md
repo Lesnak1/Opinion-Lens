@@ -1,62 +1,63 @@
-<div align="center">
-  <img src="assets/icons/icon-128.png" alt="Opinion Lens Logo" width="128" height="128">
-  <h1>Opinion Lens</h1>
-  <p><strong>The Ultimate Prediction Market Companion for Opinion.trade</strong></p>
-  <p>Track markets, get alerts, and trade directly from Twitter/X</p>
-  
-  <p>
-    <a href="#features">Features</a> •
-    <a href="#installation">Installation</a> •
-    <a href="#usage">Usage</a> •
-    <a href="#development">Development</a> •
-    <a href="#api">API</a>
-  </p>
-  
-  <p>
-    <img src="https://img.shields.io/badge/Manifest-V3-blue?style=flat-square" alt="Manifest V3">
-    <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License">
-    <img src="https://img.shields.io/badge/Tests-91%20passing-brightgreen?style=flat-square" alt="Tests">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
-  </p>
-</div>
+<p align="center">
+  <img src="assets/icons/icon-128.png" width="80" alt="Opinion Lens" />
+</p>
+
+<h1 align="center">Opinion Lens</h1>
+
+<p align="center">
+  <strong>Chrome extension that brings Opinion.trade prediction markets to your browser</strong>
+</p>
+
+<p align="center">
+  <a href="https://app.opinion.trade">Opinion.trade</a> •
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#development">Development</a>
+</p>
 
 ---
 
-## ✨ Features
+## Overview
 
-### 🚀 Popup Dashboard
-- **Portfolio Overview** - Real-time total value, P&L, and position count
-- **Trending Markets** - Hot markets ranked by volume and activity
-- **Watchlist** - Track your favorite markets with live prices
-- **Quick Search** - Find any market instantly
+Opinion Lens seamlessly integrates [Opinion.trade](https://app.opinion.trade) prediction markets into your browsing experience. It injects real-time market data directly into Twitter/X tweets, tracks trending markets, and lets you trade with a single click — all from a sleek browser popup.
+
+Built on top of the **Opinion Labs Open API** and designed for the BSC (Binance Smart Chain) ecosystem.
+
+## Features
 
 ### 🐦 Twitter/X Integration
-- **Smart Detection** - Automatically detects prediction market keywords in tweets
-- **Dynamic Matching** - Matches tweets with live Opinion markets using AI-powered keyword extraction
-- **Market Cards** - Beautiful inline cards showing YES/NO prices and probability bars
-- **Quick Trade** - One-click buttons to trade directly on Opinion.trade
-- **Multi-Market Carousel** - When multiple markets match, swipe through them
+- **NLP-powered market matching** — Automatically detects tweets related to active Opinion markets using keyword extraction, acronym/ticker detection, and entity recognition
+- **Direct URL matching** — Instantly links tweets that share Opinion.trade URLs with `topicId=` parameters (score: 999, 100% accuracy)
+- **SPA-aware observation** — Hooks into Twitter's `history.pushState` / `replaceState` to detect client-side navigation, ensuring emblems appear on both the home feed and tweet detail pages
+- **Virtual DOM healing** — Detects when Twitter recycles DOM nodes or when React re-renders wipe injected elements, and re-injects them automatically
+- **Live WebSocket prices** — Market prices flash-update in real-time directly on the emblem widget
 
-### 📊 Opinion.trade Enhancement
-- **Position Tracker Widget** - Draggable widget showing your open positions
-- **Real-time P&L** - Live profit/loss updates as prices change
-- **CSV Export** - Export your trading history for analysis
+### 🔥 Trending Markets
+- Real-time market data from Opinion.trade, auto-refreshing every 60 seconds
+- **Authenticated users** → Official `/openapi/market` endpoint with `status=activated` and `sort=5` (volume24h desc), matching Opinion.trade's trending page exactly
+- **Public users** → Multi-page `/topic` fetch with client-side filtering (`status === 2` AND `cutoffTime > now`) to exclude expired markets
 
-### 🔔 Smart Notifications
-- **Price Alerts** - Get notified when markets hit your target prices
-- **Market Events** - Alerts for resolutions and major price movements
-- **Portfolio Updates** - Notifications for significant P&L changes
+### 🆕 New Markets
+- Displays the latest active markets sorted by creation time
+- Separate tab for discovering freshly listed prediction markets
 
----
+### ⭐ Watchlist
+- Star any market to add it to your personal watchlist
+- Works with or without an API key — data is persisted in Chrome local storage
+- Falls back to cached market data from Trending/New tabs for instant rendering
 
-## 📦 Installation
+### ℹ️ About Page
+- Project info, feature highlights, and developer social links
 
-### From Source (Recommended for Development)
+## Installation
+
+### From Source (Developer Mode)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Lesnak1/Opinion-Lens.git
-   cd Opinion-Lens
+   git clone https://github.com/Lesnak1/opinion-lens.git
+   cd opinion-lens
    ```
 
 2. **Install dependencies**
@@ -69,160 +70,123 @@
    npm run build
    ```
 
-4. **Load in Chrome**
-   - Open `chrome://extensions/`
-   - Enable "Developer mode" (top right toggle)
-   - Click "Load unpacked"
-   - Select the `dist` folder
+4. **Load into Chrome**
+   - Open `chrome://extensions/` in your browser
+   - Enable **Developer mode** (toggle in the top-right corner)
+   - Click **Load unpacked**
+   - Select the `dist/` folder from this project
 
-### From Chrome Web Store
-*Coming soon*
+5. **Pin the extension** — Click the puzzle icon in Chrome's toolbar and pin "Opinion Lens"
 
----
+### From ZIP
 
-## 🔧 Usage
+1. Download `opinion-lens-v1.0.0.zip` from the [Releases](https://github.com/Lesnak1/opinion-lens/releases) page
+2. Extract the ZIP to a folder
+3. Open `chrome://extensions/` → Enable **Developer mode** → **Load unpacked** → Select the extracted folder
 
-### Initial Setup
+## Configuration
 
-1. **Get an API Key**
-   - Apply at [Opinion Builders Program](https://docs.google.com/forms/d/1h7gp8UffZeXzYQ-lv4jcou9PoRNOqMAQhyW4IwZDnII)
-   - You'll receive your key via email
+### API Key (Optional)
+An API key unlocks the full experience (official trending data, portfolio tracking, real-time WebSocket prices):
 
-2. **Configure the Extension**
-   - Click the Opinion Lens icon → Settings (gear icon)
-   - Enter your API key
-   - Click "Test Connection" to verify
+1. Apply at the [Opinion Builders Program](https://docs.google.com/forms/d/1h7gp8UffZeXzYQ-lv4jcou9PoRNOqMAQhyW4IwZDnII)
+2. Once approved, click the ⚙️ icon in the extension popup
+3. Enter your API key and save
 
-3. **Start Trading**
-   - Browse Twitter/X normally - market cards appear automatically
-   - Click the extension icon to view your dashboard
-   - Visit Opinion.trade for the position tracker widget
+Without an API key, the extension still works with public market data for Trending, New Markets, Watchlist, and Twitter matching.
 
-### Twitter Integration
+## Architecture
 
-The extension automatically detects tweets containing:
-- **Crypto**: Bitcoin, BTC, ETH, Ethereum, Solana, etc.
-- **Economics**: Fed, FOMC, CPI, inflation, rate cut, etc.
-- **Politics**: Trump, Biden, election, etc.
-- **And more**: Any keyword from active Opinion markets
-
-When detected, a market card appears below the tweet with:
-- Current YES/NO prices
-- Probability bar visualization
-- Quick trade buttons
-- Add to watchlist option
-
----
-
-## 🛠 Development
-
-### Tech Stack
-- **Manifest V3** - Latest Chrome extension architecture
-- **Vanilla JavaScript** - No framework bloat
-- **Vite** - Lightning-fast builds
-- **Vitest** - 91 unit + integration tests
-- **Shadow DOM** - Style isolation for injected components
-
-### Project Structure
 ```
 opinion-lens/
-├── background/          # Service worker & API client
-│   ├── service-worker.js
-│   ├── api-client.js
-│   ├── websocket-manager.js
-│   └── notification-service.js
-├── content/             # Content scripts for Twitter & Opinion
-│   ├── twitter-injector.js
-│   ├── opinion-injector.js
-│   └── *.css
-├── popup/               # Extension popup UI
-├── options/             # Settings page
-├── shared/              # Shared utilities & constants
-│   ├── constants.js
-│   ├── utils.js
-│   ├── storage.js
-│   └── market-indexer.js
-├── tests/               # Test suite
-├── assets/              # Icons and images
-└── dist/                # Built extension (git-ignored)
+├── background/
+│   ├── service-worker.js    # Chrome MV3 service worker (message router)
+│   └── api-client.js        # Opinion.trade API client (auth + public paths)
+├── content/
+│   ├── twitter-injector.js  # Twitter/X content script (NLP matching + emblem injection)
+│   ├── twitter-styles.css   # Glassmorphism emblem styles
+│   ├── opinion-injector.js  # Opinion.trade page enhancements
+│   └── opinion-styles.css   # Opinion page styles
+├── popup/
+│   ├── popup.html           # Extension popup UI
+│   ├── popup.js             # Popup logic (4 tabs: Trending, New, Watchlist, About)
+│   └── popup.css            # Premium dark theme styles
+├── options/
+│   ├── options.html          # Settings page
+│   └── options.js            # API key management
+├── shared/
+│   ├── constants.js          # App-wide constants and message types
+│   ├── utils.js              # Formatting utilities
+│   ├── storage.js            # Chrome storage wrapper
+│   └── market-indexer.js     # Keyword extraction and market matching engine
+├── manifest.prod.json        # Chrome MV3 manifest
+├── vite.config.js            # Build config (IIFE content scripts + ES modules)
+└── package.json
 ```
 
-### Scripts
-```bash
-npm run dev      # Development mode with watch
-npm run build    # Production build
-npm test         # Run test suite
-npm run lint     # Lint code
+### Twitter Matching Pipeline
+
+```
+Tweet appears → MutationObserver on document.body → throttle 300ms
+→ scanForTweets() queries all [data-testid="tweet"]
+→ Visible tweets processed immediately (getBoundingClientRect)
+→ Off-screen tweets queued via IntersectionObserver
+→ processTweet: extract text → refreshIndex (if stale)
+→ findMatches: URL priority check → NLP keyword scoring
+→ Filter weak matches (score < 2) → Fetch live prices
+→ Inject Shadow DOM emblem → Mark tweet as processed
+→ SPA navigation (pushState/popstate) triggers re-scan
+→ Periodic 3s safety-net re-scan catches stragglers
 ```
 
-### Running Tests
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Extension | Chrome Manifest V3 |
+| Build | Vite + Rollup (IIFE for content scripts) |
+| API | Opinion Labs Open API + Public BSC Proxy |
+| Blockchain | BSC (Binance Smart Chain) |
+| Real-time | WebSocket price streaming |
+| Styling | Vanilla CSS with CSS variables, glassmorphism |
+
+## Development
+
 ```bash
+# Install dependencies
+npm install
+
+# Build for production
+npm run build
+
+# Run tests
 npm test
-
-# Output:
-# Test Files  4 passed (4)
-#      Tests  91 passed (91)
-#   Duration  4.87s
 ```
 
----
+## API Reference
 
-## 🔌 API
+This extension uses the [Opinion Labs Open API](https://docs.opinion.trade/developer-guide/opinion-open-api):
 
-Opinion Lens uses the [Opinion.trade API](https://api.opinion.trade):
+| Endpoint | Method | Description |
+|---|---|---|
+| `/openapi/market` | GET | List markets (sort, status, pagination) |
+| `/openapi/market/{id}` | GET | Market details |
+| `/openapi/token/latest-price` | GET | Latest trade price |
+| `/openapi/token/orderbook` | GET | Order book depth |
 
-- **REST API**: Market data, prices, positions
-- **WebSocket**: Real-time price updates
-- **Rate Limit**: 15 requests/second
+## Contact
 
-### Key Endpoints Used
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /market` | Fetch active markets |
-| `GET /market/{id}` | Market details |
-| `GET /token/latest-price` | Current prices |
-| `GET /token/orderbook` | Order book data |
-| `WSS /` | Real-time price stream |
+- **Twitter/X**: [@LesnaCrex](https://x.com/LesnaCrex)
+- **GitHub**: [Lesnak1](https://github.com/Lesnak1)
+- **Email**: philosophyfactss@gmail.com
 
----
+## License
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- [Opinion.trade](https://opinion.trade) for the amazing prediction market platform
-- Built for the Opinion Builders Program
-
----
-
-<div align="center">
-  <p>Made with ❤️ for prediction market enthusiasts</p>
-  <p>
-    <a href="https://opinion.trade">Opinion.trade</a> •
-    <a href="https://x.com/opinionlabsxyz">@opinionlabsxyz</a>
-  </p>
-  
-  <h4>Built by</h4>
-  <p>
-    📧 <a href="mailto:philosophyfactss@gmail.com">philosophyfactss@gmail.com</a><br>
-    🐦 <a href="https://x.com/lesnacrex">@lesnacrex</a><br>
-    💬 Discord: <code>kresna6773</code>
-  </p>
-</div>
-
+<p align="center">
+  Built with ❤️ for the <a href="https://app.opinion.trade">Opinion.trade</a> community<br/>
+  Powered by Opinion Labs Open API
+</p>

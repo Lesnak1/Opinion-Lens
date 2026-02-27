@@ -55,10 +55,12 @@ class WebSocketManager {
                     this._stopHeartbeat();
                     this._broadcast({ type: 'CONNECTION_STATUS', connected: false });
                     this._scheduleReconnect();
+                    resolve(false);
                 };
 
                 this.ws.onerror = (error) => {
                     console.error('[WS] Error:', error);
+                    resolve(false);
                 };
 
                 this.ws.onmessage = (event) => {
@@ -78,7 +80,67 @@ class WebSocketManager {
         this._send({ action: 'AUTH', apiKey: this.apiKey });
     }
 
-    // ... (keep heartbeat methods) ...
+    /**
+     * Start heartbeat interval
+     */
+    _startHeartbeat() {
+        this._stopHeartbeat();
+        this.heartbeatInterval = setInterval(() => {
+            this._send({ action: 'PING' });
+        }, WS_HEARTBEAT_INTERVAL);
+    }
+
+    /**
+     * Stop heartbeat interval
+     */
+    _stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    }
+
+    /**
+     * Schedule reconnect
+     */
+    _scheduleReconnect() {
+        if (this.reconnectAttempts >= WS_RECONNECT_MAX_ATTEMPTS) {
+            console.error('[WS] Max reconnect attempts reached');
+            return;
+        }
+
+        const delay = WS_RECONNECT_BASE_DELAY * Math.pow(2, this.reconnectAttempts);
+        this.reconnectAttempts++;
+
+        console.log(`[WS] Reconnecting in ${delay}ms...`);
+        setTimeout(() => this._connect(), delay);
+    }
+
+    /**
+     * Broadcast to listeners
+     */
+    _broadcast(message) {
+        this.messageHandlers.forEach(handler => {
+            try {
+                handler(message);
+            } catch (error) {
+                console.error('[WS] Handler error:', error);
+            }
+        });
+    }
+
+    /**
+     * Send message
+     */
+    _send(payload) {
+        if (this.ws && this.isConnected) {
+            try {
+                this.ws.send(JSON.stringify(payload));
+            } catch (error) {
+                console.error('[WS] Send error:', error);
+            }
+        }
+    }
 
     /**
      * Resubscribe after reconnect

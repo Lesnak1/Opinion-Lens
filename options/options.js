@@ -8,6 +8,7 @@ import { storage } from '../shared/storage.js';
 // DOM Elements
 const elements = {
     apiKey: document.getElementById('apiKey'),
+    walletAddress: document.getElementById('walletAddress'),
     toggleApiKey: document.getElementById('toggleApiKey'),
     testConnection: document.getElementById('testConnection'),
     connectionResult: document.getElementById('connectionResult'),
@@ -43,6 +44,12 @@ async function loadSettings() {
     const apiKey = await storage.getApiKey();
     if (apiKey) {
         elements.apiKey.value = apiKey;
+    }
+
+    // Load Wallet Address
+    const walletAddress = await storage.getWalletAddress();
+    if (walletAddress) {
+        elements.walletAddress.value = walletAddress;
     }
 
     // Load settings
@@ -143,6 +150,10 @@ async function saveSettings() {
             type: MESSAGE_TYPES.SET_API_KEY,
             apiKey: apiKey || null
         });
+
+        // Save Wallet Address
+        const walletAddress = elements.walletAddress.value.trim();
+        await storage.setWalletAddress(walletAddress || null);
 
         // Save settings
         const settings = {

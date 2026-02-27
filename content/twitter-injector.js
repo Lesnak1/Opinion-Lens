@@ -8,8 +8,9 @@ import { formatPrice, formatNumber, formatRelativeDate, escapeHtml, debounce, th
 
 // Configuration
 const CONFIG = {
-  cardClass: 'opinion-lens-card',
-  processedAttr: 'data-ol-processed',
+  cardClass: 'opinion-emblem-container',
+  statusAttr: 'data-ol-status',
+  textAttr: 'data-ol-text',
   highlightClass: 'ol-keyword',
   maxMarketsPerTweet: 3,
   cacheExpiry: 5 * 60 * 1000, // 5 minutes
@@ -36,7 +37,7 @@ class MarketIndex {
     this.keywordMap.clear();
 
     for (const market of markets) {
-      const keywords = this.extractKeywords(market.title || market.question || '');
+      const keywords = this.extractKeywords(market.marketTitle || market.title || market.question || '');
       market._keywords = keywords;
 
       for (const keyword of keywords) {
@@ -52,32 +53,64 @@ class MarketIndex {
 
   extractKeywords(title) {
     const keywords = new Set();
-    const stopWords = new Set(['will', 'the', 'be', 'to', 'of', 'and', 'a', 'in', 'is', 'are', 'was', 'has', 'have', 'before', 'after', 'by', 'for', 'on', 'at', 'or', 'an', 'if', 'than', 'then']);
+    const stopWords = new Set([
+      'will', 'the', 'be', 'to', 'of', 'and', 'a', 'in', 'is', 'are', 'was', 'has', 'have',
+      'before', 'after', 'by', 'for', 'on', 'at', 'or', 'an', 'if', 'than', 'then', 'who',
+      'what', 'when', 'where', 'why', 'how', 'do', 'does', 'did', 'vs', 'v'
+    ]);
 
-    // Extract words
-    const words = title.toLowerCase()
-      .replace(/[?!.,;:'"()[\]{}$%]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length > 2 && !stopWords.has(w));
+    // Enhanced regex to remove special chars but keep hyphens and apostrophes for names
+    const cleanTitle = title.toLowerCase().replace(/[?!.,;:"()[\]{}$%]/g, ' ');
 
+    // 1. Extract Individual Meaningful Words
+    const words = cleanTitle.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
     words.forEach(w => keywords.add(w));
 
-    // Extract named entities (capitalized)
-    const entities = title.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?/g) || [];
-    entities.forEach(e => keywords.add(e.toLowerCase()));
+    // 2. Extract Named Entities (Capitalized words, catching names, countries, e-sports teams like "NaVi", "G2")
+    const entities = title.match(/[A-Za-z0-9]+(?:\s+[A-Za-z0-9]+)?/g) || [];
+    // We filter entities to only those that actually start with a capital letter in the original text, to catch proper nouns
+    const properNouns = title.match(/\b[A-Z][a-z0-9]+\b(?:\s+[A-Z][a-z0-9]+\b)*/g) || [];
+    properNouns.forEach(e => {
+      if (e.length > 2) keywords.add(e.toLowerCase());
+    });
 
-    // Extract tickers and abbreviations
-    const tickers = title.match(/\b[A-Z]{2,5}\b/g) || [];
-    tickers.forEach(t => keywords.add(t.toLowerCase()));
+    // 3. Extract common acronyms / tickers / short team names (e.g. BTC, ETH, USA, G2, T1)
+    const acronyms = title.match(/\b[A-Z0-9]{2,5}\b/g) || [];
+    acronyms.forEach(t => keywords.add(t.toLowerCase()));
 
-    // Extract numbers with context (like "100k", "2024")
-    const numbers = title.match(/\$?\d+(?:[,.]\d+)?[kKmMbB]?/g) || [];
+    // 4. Extract Multi-word Contexts (Targeting versus matches like "NaVi vs Faze" or "US vs Iran")
+    // If the title contains "vs", we want to ensure the combatants are extracted clearly
+    const vsMatch = cleanTitle.split(/\s+vs\s+|\s+v\s+/);
+    if (vsMatch.length > 1) {
+      vsMatch.forEach(part => {
+        const partWords = part.trim().split(/\s+/);
+        if (partWords.length > 0 && partWords[0].length > 1) {
+          keywords.add(partWords[partWords.length - 1]); // the word right before/after vs
+        }
+      });
+    }
+
+    // 5. Extract numbers with strong context (like "$10", "100k", "2024")
+    // Ignore plain 1-3 digit numbers as they cause massive false positives
+    const numbers = title.match(/(?:\$|€|£)\d+(?:[,.]\d+)?[kKmMbB]?|\b\d+(?:[,.]\d+)?[kKmMbB]\b|\b(?:19|20)\d{2}\b/g) || [];
     numbers.forEach(n => keywords.add(n.toLowerCase()));
 
     return Array.from(keywords);
   }
 
   findMatches(text) {
+    // 1. Hard Check: Did they post the actual Opinion.trade URL?
+    const urlMatch = text.match(/topicId=(\d+)/);
+    if (urlMatch) {
+      const targetTopicId = parseInt(urlMatch[1], 10);
+      for (const markets of this.keywordMap.values()) {
+        const exact = markets.find(m => m.id === targetTopicId || m.topicId === targetTopicId || m.marketId === targetTopicId);
+        if (exact) {
+          return [{ market: exact, score: 999, keywords: ['URL_MATCH'] }];
+        }
+      }
+    }
+
     const matches = new Map();
     const lowerText = text.toLowerCase();
     const textWords = new Set(lowerText.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/));
@@ -88,7 +121,7 @@ class MarketIndex {
 
       if (regex.test(lowerText) || textWords.has(keyword)) {
         for (const market of markets) {
-          const id = market.id;
+          const id = market.marketId || market.id || market.topicId;
           if (!matches.has(id)) {
             matches.set(id, {
               market,
@@ -102,7 +135,9 @@ class MarketIndex {
       }
     }
 
+    // Filter out weak matches (require at least score of 2, OR a very strong single keyword > 5 chars)
     return Array.from(matches.values())
+      .filter(m => m.score >= 2 || (m.score === 1 && m.keywords[0].length >= 5))
       .sort((a, b) => b.score - a.score)
       .slice(0, CONFIG.maxMarketsPerTweet);
   }
@@ -115,7 +150,7 @@ async function fetchMarkets() {
   try {
     const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.GET_MARKETS,
-      params: { limit: 50, status: 'activated' }
+      params: { limit: 20, status: 'activated', sortBy: 5 } // Pull markets for the Twitter Index, sorting by popularity
     });
     return Array.isArray(response) ? response : (response?.items || []);
   } catch (error) {
@@ -144,7 +179,8 @@ async function refreshIndex() {
 }
 
 /**
- * Tweet Observer - Watches for new tweets with IntersectionObserver
+ * Tweet Observer - Watches for new tweets with robust SPA navigation support
+ * Handles: feed scrolling, tweet detail pages, back navigation, URL changes
  */
 class TweetObserver {
   constructor(callback) {
@@ -152,96 +188,169 @@ class TweetObserver {
     this.mutationObserver = null;
     this.intersectionObserver = null;
     this.pendingTweets = new Set();
+    this.lastUrl = location.href;
+    this.scanInterval = null;
+    this.isProcessing = false;
   }
 
   start() {
-    // Intersection Observer for lazy processing
+    // Intersection Observer for lazy processing of off-screen tweets
     this.intersectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting && this.pendingTweets.has(entry.target)) {
             this.pendingTweets.delete(entry.target);
+            this.intersectionObserver.unobserve(entry.target);
             this.callback(entry.target);
           }
         });
       },
-      { rootMargin: '100px', threshold: 0.1 }
+      { rootMargin: '200px', threshold: 0.1 }
     );
 
-    this.waitForTimeline().then(timeline => {
-      this.mutationObserver = new MutationObserver(
-        throttle((mutations) => {
-          for (const mutation of mutations) {
-            for (const node of mutation.addedNodes) {
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                this.processTweets(node);
-              }
-            }
-          }
-        }, 200)
-      );
+    // Watch document.body for ALL DOM changes (covers SPA navigation, feed updates, tweet detail pages)
+    this.mutationObserver = new MutationObserver(
+      throttle(() => {
+        this.scanForTweets();
+      }, 300)
+    );
 
-      this.mutationObserver.observe(timeline, {
-        childList: true,
-        subtree: true
-      });
-
-      this.processTweets(timeline);
+    this.mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true
     });
+
+    // Detect SPA navigation via URL changes (Twitter uses History API)
+    this.setupNavigationDetection();
+
+    // Periodic safety-net scan every 3 seconds
+    // Catches tweets that mutations and intersection observers might miss
+    this.scanInterval = setInterval(() => {
+      this.scanForTweets();
+    }, 3000);
+
+    // Initial scan
+    this.scanForTweets();
   }
 
-  processTweets(container) {
-    const tweets = container.querySelectorAll('[data-testid="tweet"]');
-    tweets.forEach(tweet => {
-      if (!processedTweets.has(tweet) && !tweet.hasAttribute(CONFIG.processedAttr)) {
-        this.pendingTweets.add(tweet);
-        this.intersectionObserver.observe(tweet);
-      }
-    });
+  setupNavigationDetection() {
+    // Override pushState/replaceState to detect SPA navigation
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    const self = this;
+
+    history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      self.onNavigate();
+    };
+
+    history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args);
+      self.onNavigate();
+    };
+
+    // Also listen for popstate (back/forward button)
+    window.addEventListener('popstate', () => this.onNavigate());
   }
 
-  waitForTimeline() {
-    return new Promise(resolve => {
-      const check = () => {
-        const timeline = document.querySelector('[data-testid="primaryColumn"]');
-        if (timeline) {
-          resolve(timeline);
-        } else {
-          requestAnimationFrame(check);
+  onNavigate() {
+    const newUrl = location.href;
+    if (newUrl !== this.lastUrl) {
+      this.lastUrl = newUrl;
+      console.log('[Opinion Lens] SPA navigation detected:', newUrl.substring(0, 60));
+
+      // Reset pending tweets (old DOM nodes may be gone)
+      this.pendingTweets.clear();
+
+      // Wait for Twitter to render the new page, then scan aggressively
+      setTimeout(() => this.scanForTweets(), 500);
+      setTimeout(() => this.scanForTweets(), 1500);
+      setTimeout(() => this.scanForTweets(), 3000);
+    }
+  }
+
+  scanForTweets() {
+    if (this.isProcessing) return;
+    this.isProcessing = true;
+
+    try {
+      // Find ALL tweet elements on the entire page (works for feed, detail, search, etc.)
+      const tweets = document.querySelectorAll('[data-testid="tweet"]');
+
+      tweets.forEach(tweet => {
+        const textNode = tweet.querySelector('[data-testid="tweetText"]');
+        const currentText = textNode ? textNode.textContent.substring(0, 100) : '';
+
+        const processedText = tweet.getAttribute(CONFIG.textAttr);
+        const status = tweet.getAttribute(CONFIG.statusAttr);
+
+        // 1. Virtual DOM Recycling Check
+        if (status && processedText !== currentText) {
+          tweet.removeAttribute(CONFIG.statusAttr);
+          tweet.removeAttribute(CONFIG.textAttr);
+          const oldEmblem = tweet.querySelector(`.${CONFIG.cardClass}`);
+          if (oldEmblem) oldEmblem.remove();
         }
-      };
-      check();
-    });
+
+        // 2. React Re-render Healing Check
+        if (tweet.getAttribute(CONFIG.statusAttr) === 'has-emblem') {
+          const emblem = tweet.querySelector(`.${CONFIG.cardClass}`);
+          if (!emblem) {
+            tweet.removeAttribute(CONFIG.statusAttr);
+            tweet.removeAttribute(CONFIG.textAttr);
+          }
+        }
+
+        // 3. Queue for processing if unprocessed
+        if (!tweet.hasAttribute(CONFIG.statusAttr) && !this.pendingTweets.has(tweet)) {
+          // Check if tweet is already visible (above fold)
+          const rect = tweet.getBoundingClientRect();
+          const isVisible = rect.top < window.innerHeight + 200 && rect.bottom > -200;
+
+          if (isVisible) {
+            // Process immediately — don't wait for IntersectionObserver
+            this.callback(tweet);
+          } else {
+            // Queue for lazy processing when scrolled into view
+            this.pendingTweets.add(tweet);
+            this.intersectionObserver.observe(tweet);
+          }
+        }
+      });
+    } finally {
+      this.isProcessing = false;
+    }
   }
 
   stop() {
     this.mutationObserver?.disconnect();
     this.intersectionObserver?.disconnect();
+    if (this.scanInterval) clearInterval(this.scanInterval);
   }
 }
 
 /**
- * Create enhanced market card HTML
+ * Create sleek market emblem HTML
  */
 function createMarketCard(market, matchedKeywords) {
-  const yesPrice = market.yesPrice || 0.5;
+  const yesPrice = parseFloat(market.yesPrice || 0.5);
   const noPrice = 1 - yesPrice;
-  // Change data not available in list response
-  const yesChange = 0;
-  const volume = parseFloat(market.volume24h) || 0;
   const yesPct = Math.round(yesPrice * 100);
 
   const title = market.marketTitle || market.title || market.question || 'Untitled Market';
-  const endDate = market.cutoffAt ? new Date(market.cutoffAt * 1000).toISOString() : (market.resolutionDate || market.endDate);
+  const marketId = market.marketId || market.id;
+  const isMulti = !!(market.childList?.length > 0) || (!market.yesTokenId && !market.yesLabel);
 
-  const changeClass = yesChange >= 0 ? 'positive' : 'negative';
-  const changeSign = yesChange >= 0 ? '+' : '';
+  // Use API-provided labels (YES/NO or UP/DOWN)
+  const leftLabel = market.yesLabel || 'YES';
+  const rightLabel = market.noLabel || 'NO';
 
   return `
-    <div class="ol-card" data-market-id="${market.id}">
-      <div class="ol-header">
-        <div class="ol-brand">
-          <svg class="ol-logo" viewBox="0 0 24 24">
+    <div class="ol-emblem" data-market-id="${marketId}" data-token-id="${market.yesTokenId || ''}" data-is-multi="${isMulti ? 'true' : 'false'}">
+      <div class="ol-emblem-glow"></div>
+      <div class="ol-emblem-content">
+        <a class="ol-emblem-brand" href="${OPINION_APP_URL}/detail?topicId=${marketId}${isMulti ? '&type=multi' : ''}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" class="ol-emblem-icon">
             <defs>
               <linearGradient id="olGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" style="stop-color:#6366F1"/>
@@ -251,50 +360,23 @@ function createMarketCard(market, matchedKeywords) {
             <circle cx="12" cy="12" r="10" fill="url(#olGrad)"/>
             <text x="12" y="16" text-anchor="middle" fill="white" font-size="11" font-weight="bold">O</text>
           </svg>
-          <span>Opinion Market</span>
-        </div>
-        <div class="ol-change ${changeClass}">
-          ${changeSign}${(yesChange * 100).toFixed(1)}%
-        </div>
-      </div>
-      
-      <div class="ol-title">${escapeHtml(title)}</div>
-      
-      <div class="ol-probability">
-        <div class="ol-prob-bar">
-          <div class="ol-prob-fill" style="width: ${yesPct}%"></div>
-        </div>
-        <div class="ol-prob-labels">
-          <span class="ol-yes-label">${yesPct}% YES</span>
-          <span class="ol-no-label">${100 - yesPct}% NO</span>
-        </div>
-      </div>
-      
-      <div class="ol-prices">
-        <button class="ol-trade-btn ol-yes-btn" data-side="yes">
-          <span class="ol-btn-label">YES</span>
-          <span class="ol-btn-price">${formatPrice(yesPrice)}</span>
-        </button>
-        <button class="ol-trade-btn ol-no-btn" data-side="no">
-          <span class="ol-btn-label">NO</span>
-          <span class="ol-btn-price">${formatPrice(noPrice)}</span>
-        </button>
-      </div>
-      
-      <div class="ol-footer">
-        <div class="ol-meta">
-          <span class="ol-volume">💰 ${formatNumber(volume)}</span>
-          <span class="ol-ends">⏰ ${formatRelativeDate(endDate)}</span>
-        </div>
-        <div class="ol-actions">
-          <button class="ol-action-btn ol-watchlist" title="Add to Watchlist">⭐</button>
-          <button class="ol-action-btn ol-share" title="Copy Link">📋</button>
+        </a>
+        
+        <a class="ol-emblem-title" href="${OPINION_APP_URL}/detail?topicId=${marketId}${isMulti ? '&type=multi' : ''}" target="_blank" rel="noopener">
+          ${escapeHtml(title)}
+        </a>
+
+        <div class="ol-emblem-actions">
+          <button class="ol-trade-btn ol-yes-btn" data-side="yes">
+            <span class="ol-btn-label">${leftLabel}</span>
+            <span class="ol-btn-price">${formatPrice(yesPrice)}</span>
+          </button>
+          <button class="ol-trade-btn ol-no-btn" data-side="no">
+            <span class="ol-btn-label">${rightLabel}</span>
+            <span class="ol-btn-price">${formatPrice(noPrice)}</span>
+          </button>
         </div>
       </div>
-      
-      <a class="ol-cta" href="${OPINION_APP_URL}/market/${market.id}" target="_blank" rel="noopener">
-        Trade on Opinion.trade →
-      </a>
     </div>
   `;
 }
@@ -330,7 +412,7 @@ function createMarketCarousel(matches) {
 }
 
 /**
- * Get enhanced styles
+ * Get enhanced emblem styles
  */
 function getEnhancedStyles() {
   return `
@@ -339,123 +421,105 @@ function getEnhancedStyles() {
       --ol-primary-light: #818CF8;
       --ol-green: #10B981;
       --ol-red: #EF4444;
-      --ol-bg: rgba(15, 15, 20, 0.95);
-      --ol-border: rgba(99, 102, 241, 0.3);
+      --ol-bg: rgba(20, 20, 28, 0.7);
+      --ol-border: rgba(99, 102, 241, 0.25);
       --ol-text: #FFFFFF;
-      --ol-text-muted: rgba(255, 255, 255, 0.6);
+      --ol-text-muted: rgba(255, 255, 255, 0.8);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
     
     .ol-container {
-      margin: 12px 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 6px 0 10px 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
-    .ol-card {
+    .ol-emblem {
+      position: relative;
+      display: inline-flex;
+      border-radius: 9999px;
+      padding: 1px;
+      background: linear-gradient(90deg, var(--ol-border), transparent, var(--ol-border));
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      max-width: 100%;
+    }
+    
+    .ol-emblem:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+    }
+    
+    .ol-emblem-content {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 12px;
-      padding: 16px;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, var(--ol-bg) 100%);
-      border: 1px solid var(--ol-border);
-      border-radius: 16px;
-      backdrop-filter: blur(12px);
+      background: var(--ol-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 9999px;
+      padding: 6px 6px 6px 12px;
+      height: 44px;
+      min-width: 0;
     }
     
-    .ol-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .ol-brand {
+    .ol-emblem-brand {
       display: flex;
       align-items: center;
-      gap: 6px;
+      text-decoration: none;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
     }
     
-    .ol-logo {
-      width: 18px;
-      height: 18px;
+    .ol-emblem-brand:hover {
+      transform: scale(1.05);
     }
     
-    .ol-brand span {
-      font-size: 11px;
-      color: var(--ol-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .ol-emblem-icon {
+      width: 22px;
+      height: 22px;
     }
     
-    .ol-change {
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-    
-    .ol-change.positive {
-      color: var(--ol-green);
-      background: rgba(16, 185, 129, 0.15);
-    }
-    
-    .ol-change.negative {
-      color: var(--ol-red);
-      background: rgba(239, 68, 68, 0.15);
-    }
-    
-    .ol-title {
-      font-size: 15px;
+    .ol-emblem-title {
+      font-size: 14px;
       font-weight: 600;
       color: var(--ol-text);
-      line-height: 1.4;
-    }
-    
-    .ol-probability {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    
-    .ol-prob-bar {
-      height: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
+      text-decoration: none;
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
+      letter-spacing: 0.1px;
+      flex-grow: 1;
     }
     
-    .ol-prob-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--ol-green) 0%, var(--ol-primary) 100%);
-      border-radius: 4px;
-      transition: width 0.3s ease;
+    .ol-emblem-title:hover {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      decoration-color: var(--ol-primary);
     }
     
-    .ol-prob-labels {
+    .ol-emblem-actions {
       display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      font-weight: 500;
-    }
-    
-    .ol-yes-label { color: var(--ol-green); }
-    .ol-no-label { color: var(--ol-red); }
-    
-    .ol-prices {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 6px;
+      flex-shrink: 0;
     }
     
     .ol-trade-btn {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 2px;
-      padding: 12px;
+      gap: 6px;
+      height: 32px;
+      padding: 0 12px;
       border: none;
-      border-radius: 10px;
+      border-radius: 9999px;
+      font-family: inherit;
       cursor: pointer;
       transition: all 0.2s ease;
-      font-family: inherit;
+      color: #fff;
     }
     
     .ol-yes-btn {
@@ -464,8 +528,7 @@ function getEnhancedStyles() {
     }
     
     .ol-yes-btn:hover {
-      background: rgba(16, 185, 129, 0.25);
-      transform: translateY(-2px);
+      background: rgba(16, 185, 129, 0.3);
     }
     
     .ol-no-btn {
@@ -474,14 +537,12 @@ function getEnhancedStyles() {
     }
     
     .ol-no-btn:hover {
-      background: rgba(239, 68, 68, 0.25);
-      transform: translateY(-2px);
+      background: rgba(239, 68, 68, 0.3);
     }
     
     .ol-btn-label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 700;
       letter-spacing: 0.5px;
     }
     
@@ -489,146 +550,41 @@ function getEnhancedStyles() {
     .ol-no-btn .ol-btn-label { color: var(--ol-red); }
     
     .ol-btn-price {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--ol-text);
-    }
-    
-    .ol-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .ol-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 12px;
-      color: var(--ol-text-muted);
-    }
-    
-    .ol-actions {
-      display: flex;
-      gap: 6px;
-    }
-    
-    .ol-action-btn {
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s ease;
-    }
-    
-    .ol-action-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      transform: scale(1.1);
-    }
-    
-    .ol-cta {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-      background: linear-gradient(135deg, var(--ol-primary) 0%, #4F46E5 100%);
-      border-radius: 10px;
-      color: white;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s ease;
     }
     
-    .ol-cta:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    /* Price flash animations */
+    @keyframes priceFlashUp {
+      0% { background: rgba(16, 185, 129, 0.6); }
+      100% { background: rgba(16, 185, 129, 0.15); }
     }
-    
-    /* Carousel */
+    @keyframes priceFlashDown {
+      0% { background: rgba(239, 68, 68, 0.6); }
+      100% { background: rgba(239, 68, 68, 0.15); }
+    }
+    .flash-up { animation: priceFlashUp 0.8s ease-out; }
+    .flash-down { animation: priceFlashDown 0.8s ease-out; }
+
+    /* Carousel overrides for emblem */
     .ol-carousel {
+      max-width: 100%;
+      overflow: hidden;
       position: relative;
     }
-    
     .ol-carousel-track {
       display: flex;
-      transition: transform 0.3s ease;
+      transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
-    
     .ol-carousel-slide {
       flex: 0 0 100%;
       display: none;
     }
-    
     .ol-carousel-slide.active {
       display: block;
     }
-    
     .ol-carousel-nav {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    
-    .ol-carousel-prev,
-    .ol-carousel-next {
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: 50%;
-      color: white;
-      font-size: 18px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    .ol-carousel-prev:hover,
-    .ol-carousel-next:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-    
-    .ol-carousel-dots {
-      display: flex;
-      gap: 6px;
-    }
-    
-    .ol-carousel-dot {
-      width: 8px;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.3);
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .ol-carousel-dot.active {
-      background: var(--ol-primary);
-      transform: scale(1.2);
-    }
-    
-    /* Keyword highlight */
-    .ol-keyword {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
-      border-radius: 4px;
-      padding: 1px 4px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    .ol-keyword:hover {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(139, 92, 246, 0.5) 100%);
+      display: none;
     }
   `;
 }
@@ -711,49 +667,12 @@ function setupCardEvents(shadow, matches) {
   shadow.querySelectorAll('.ol-trade-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      const card = btn.closest('.ol-card');
-      const marketId = card?.dataset.marketId;
+      const card = btn.closest('.ol-emblem');
       const side = btn.dataset.side;
-      if (marketId) {
-        window.open(`${OPINION_APP_URL}/market/${marketId}?side=${side}`, '_blank');
-      }
-    });
-  });
-
-  // Watchlist button
-  shadow.querySelectorAll('.ol-watchlist').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const card = btn.closest('.ol-card');
       const marketId = card?.dataset.marketId;
       if (marketId) {
-        try {
-          await chrome.runtime.sendMessage({
-            type: MESSAGE_TYPES.ADD_TO_WATCHLIST,
-            marketId
-          });
-          btn.textContent = '⭐️';
-          btn.style.color = '#FFD700';
-        } catch (e) {
-          console.error('[Opinion Lens] Failed to add to watchlist:', e);
-        }
-      }
-    });
-  });
-
-  // Share button
-  shadow.querySelectorAll('.ol-share').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const card = btn.closest('.ol-card');
-      const marketId = card?.dataset.marketId;
-      if (marketId) {
-        const url = `${OPINION_APP_URL}/market/${marketId}`;
-        try {
-          await navigator.clipboard.writeText(url);
-          btn.textContent = '✓';
-          setTimeout(() => btn.textContent = '📋', 2000);
-        } catch (e) {
-          window.open(url, '_blank');
-        }
+        const isMulti = card.dataset.isMulti === 'true';
+        window.open(`${OPINION_APP_URL}/detail?topicId=${marketId}${isMulti ? '&type=multi' : ''}&side=${side}`, '_blank');
       }
     });
   });
@@ -763,25 +682,34 @@ function setupCardEvents(shadow, matches) {
  * Process a single tweet
  */
 async function processTweet(tweet) {
-  // Mark as processed
-  if (tweet.hasAttribute(CONFIG.processedAttr)) return;
-  tweet.setAttribute(CONFIG.processedAttr, 'true');
-  processedTweets.add(tweet);
+  // Check if someone else processed it while queued
+  if (tweet.hasAttribute(CONFIG.statusAttr)) return;
 
-  // Get tweet text
-  const tweetText = tweet.querySelector('[data-testid="tweetText"]');
-  if (!tweetText) return;
+  const tweetTextNode = tweet.querySelector('[data-testid="tweetText"]');
+  if (!tweetTextNode) return;
 
-  const text = tweetText.textContent || '';
+  const text = tweetTextNode.textContent || '';
   if (text.length < 10) return; // Skip very short tweets
+
+  // Mark as processing and save text hash (first 100 chars) to detect virtual DOM recycling
+  const shortText = text.substring(0, 100);
+  tweet.setAttribute(CONFIG.statusAttr, 'processing');
+  tweet.setAttribute(CONFIG.textAttr, shortText);
 
   // Ensure index is fresh
   await refreshIndex();
-  if (!marketIndex) return;
+
+  if (!marketIndex) {
+    tweet.setAttribute(CONFIG.statusAttr, 'failed');
+    return;
+  }
 
   // Find matching markets
   const matches = marketIndex.findMatches(text);
-  if (matches.length === 0) return;
+  if (matches.length === 0) {
+    tweet.setAttribute(CONFIG.statusAttr, 'no-match');
+    return;
+  }
 
   console.log(`[Opinion Lens] Found ${matches.length} markets for tweet`);
 
@@ -790,6 +718,18 @@ async function processTweet(tweet) {
 
   for (const match of topMatches) {
     try {
+      const mId = match.market.marketId || match.market.id;
+      // Fetch details first to ensure we have yesTokenId
+      const details = await chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.GET_MARKET_DETAILS,
+        marketId: mId // pass marketId explicitly
+      });
+
+      if (details && !details.error) {
+        // Merge details into market object (to get yesTokenId, volume24h, etc)
+        Object.assign(match.market, details);
+      }
+
       if (match.market.yesTokenId) {
         const priceData = await chrome.runtime.sendMessage({
           type: MESSAGE_TYPES.GET_LATEST_PRICE,
@@ -800,12 +740,70 @@ async function processTweet(tweet) {
         }
       }
     } catch (e) {
-      console.error('[Opinion Lens] Failed to fetch price for match:', match.market.id, e);
+      console.error('[Opinion Lens] Failed to fetch data for match:', match.market.marketId || match.market.id, e);
     }
   }
 
   // Inject cards
   injectMarketCards(tweet, topMatches);
+  tweet.setAttribute(CONFIG.statusAttr, 'has-emblem');
+}
+
+/**
+ * Update emblem prices dynamically with flash animation
+ */
+function updateEmblemPrice(data) {
+  // data: { tokenId, price, type: 'yes'|'no'|etc }
+  // We only get yes price from WebSocket usually, or the specific token price
+
+  const containers = document.querySelectorAll(`.${CONFIG.cardClass}`);
+  containers.forEach(container => {
+    if (!container.shadowRoot) return;
+
+    // Find emblems matching this token
+    const emblems = container.shadowRoot.querySelectorAll(`.ol-emblem[data-token-id="${data.tokenId}"]`);
+
+    emblems.forEach(emblem => {
+      const yesBtn = emblem.querySelector('.ol-yes-btn');
+      const noBtn = emblem.querySelector('.ol-no-btn');
+
+      if (!yesBtn || !noBtn) return;
+
+      const yesPriceEl = yesBtn.querySelector('.ol-btn-price');
+      const noPriceEl = noBtn.querySelector('.ol-btn-price');
+
+      const newYesPrice = parseFloat(data.price);
+      const newNoPrice = 1 - newYesPrice;
+
+      const oldYesPrice = parseFloat(yesPriceEl.textContent.replace('$', ''));
+
+      if (Math.abs(oldYesPrice - newYesPrice) > 0.001) {
+        yesPriceEl.textContent = formatPrice(newYesPrice);
+        noPriceEl.textContent = formatPrice(newNoPrice);
+
+        // Flash animation
+        const flashClass = newYesPrice > oldYesPrice ? 'flash-up' : 'flash-down';
+
+        // Remove existing animation if any
+        yesBtn.classList.remove('flash-up', 'flash-down');
+        noBtn.classList.remove('flash-up', 'flash-down');
+
+        // Trigger reflow to restart animation
+        void yesBtn.offsetWidth;
+        void noBtn.offsetWidth;
+
+        yesBtn.classList.add(flashClass);
+        // Inverse flash for NO
+        noBtn.classList.add(newYesPrice > oldYesPrice ? 'flash-down' : 'flash-up');
+
+        // Clean up classes after animation (0.8s)
+        setTimeout(() => {
+          yesBtn.classList.remove('flash-up', 'flash-down');
+          noBtn.classList.remove('flash-up', 'flash-down');
+        }, 800);
+      }
+    });
+  });
 }
 
 /**
@@ -838,7 +836,7 @@ async function init() {
   // Handle real-time price updates
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === MESSAGE_TYPES.PRICE_UPDATE) {
-      // Could update visible cards here
+      updateEmblemPrice(message.data);
     }
   });
 }

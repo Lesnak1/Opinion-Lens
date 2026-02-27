@@ -44,6 +44,9 @@ export const MESSAGE_TYPES = {
     SEARCH_MARKETS: 'SEARCH_MARKETS',
     GET_LATEST_PRICE: 'GET_LATEST_PRICE',
     SUBSCRIBE_USER_MARKET: 'SUBSCRIBE_USER_MARKET',
+    GET_USER_POSITIONS: 'GET_USER_POSITIONS',
+    SET_API_KEY: 'SET_API_KEY',
+    TEST_API_KEY: 'TEST_API_KEY',
 
     // Broadcasts
     PRICE_UPDATE: 'PRICE_UPDATE',
@@ -57,6 +60,7 @@ export const MESSAGE_TYPES = {
 // Storage Keys
 export const STORAGE_KEYS = {
     API_KEY: 'opinion_api_key',
+    WALLET_ADDRESS: 'opinion_wallet_address',
     WATCHLIST: 'opinion_watchlist',
     ALERTS: 'opinion_alerts',
     SETTINGS: 'opinion_settings',

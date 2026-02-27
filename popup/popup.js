@@ -17,8 +17,11 @@ const elements = {
     searchInput: document.getElementById('searchInput'),
     tabs: document.querySelectorAll('.tab'),
     trendingSection: document.getElementById('trendingSection'),
+    newSection: document.getElementById('newSection'),
     watchlistSection: document.getElementById('watchlistSection'),
+    aboutSection: document.getElementById('aboutSection'),
     trendingMarkets: document.getElementById('trendingMarkets'),
+    newMarkets: document.getElementById('newMarkets'),
     watchlistMarkets: document.getElementById('watchlistMarkets'),
     refreshBtn: document.getElementById('refreshBtn'),
 };
@@ -26,6 +29,7 @@ const elements = {
 // State
 let state = {
     markets: [],
+    newMarketsList: [],
     watchlist: [],
     activeTab: 'trending',
     hasApiKey: false,
@@ -48,17 +52,34 @@ async function init() {
     // Check connection status first
     await loadConnectionStatus();
 
+    // Load UI based on API key status
     if (state.hasApiKey) {
         await Promise.all([
+            loadPortfolio(),
             loadMarkets(),
+            loadNewMarkets(),
             loadWatchlist(),
         ]);
     } else {
-        showApiKeyRequired();
+        // Load trending + new markets + watchlist (all from public endpoint)
+        await Promise.all([
+            loadMarkets(),
+            loadNewMarkets(),
+            loadWatchlist(),
+        ]);
     }
 
     // Listen for real-time updates
     chrome.runtime.onMessage.addListener(handleMessage);
+
+    // Auto-refresh trending + new markets list every 60 seconds while popup is open
+    setInterval(() => {
+        loadMarkets();
+        loadNewMarkets();
+        if (state.hasApiKey) {
+            loadPortfolio();
+        }
+    }, 60000);
 }
 
 /**
@@ -80,8 +101,10 @@ function setupEventListeners() {
 
     // Refresh
     elements.refreshBtn.addEventListener('click', () => {
+        loadMarkets();
+        loadNewMarkets();
         if (state.hasApiKey) {
-            loadMarkets();
+            loadPortfolio();
             loadWatchlist();
         }
     });
@@ -116,6 +139,57 @@ function updateConnectionStatus(status) {
     } else {
         elements.connectionStatus.className = 'status status--disconnected';
         elements.connectionStatus.title = 'Disconnected';
+    }
+}
+
+/**
+ * Load Portfolio
+ */
+async function loadPortfolio() {
+    elements.totalValue.textContent = '...';
+    elements.todayPnl.textContent = '...';
+    elements.positionCount.textContent = '...';
+
+    try {
+        const positions = await sendMessage(MESSAGE_TYPES.GET_USER_POSITIONS, { params: { pageSize: 100 } });
+
+        if (positions?.error) {
+            console.log('[Opinion Lens] Portfolio fetch error or no wallet:', positions.error);
+            elements.totalValue.textContent = '$0.00';
+            elements.todayPnl.textContent = '$0.00';
+            elements.positionCount.textContent = '0';
+            return;
+        }
+
+        if (Array.isArray(positions)) {
+            let totalValue = 0;
+            let totalPnl = 0;
+            let activeCount = 0;
+
+            positions.forEach(pos => {
+                const val = parseFloat(pos.currentValueInQuoteToken || 0);
+                const pnl = parseFloat(pos.unrealizedPnl || 0);
+                // only count positions with some value
+                if (val > 0.001 || Math.abs(pnl) > 0.001) {
+                    totalValue += val;
+                    totalPnl += pnl;
+                    activeCount++;
+                }
+            });
+
+            elements.totalValue.textContent = `$${formatNumber(totalValue)}`;
+
+            const isPositive = totalPnl >= 0;
+            elements.todayPnl.textContent = `${isPositive ? '+' : ''}$${formatNumber(totalPnl)}`;
+            elements.todayPnl.className = `portfolio-value portfolio-pnl ${isPositive ? 'positive' : 'negative'}`;
+
+            elements.positionCount.textContent = activeCount.toString();
+        }
+    } catch (e) {
+        console.error('[Opinion Lens] Failed to load portfolio', e);
+        elements.totalValue.textContent = '$0.00';
+        elements.todayPnl.textContent = '$0.00';
+        elements.positionCount.textContent = '0';
     }
 }
 
@@ -156,11 +230,6 @@ function showApiKeyRequired() {
  * Load trending markets
  */
 async function loadMarkets() {
-    if (!state.hasApiKey) {
-        showApiKeyRequired();
-        return;
-    }
-
     elements.trendingMarkets.innerHTML = '<div class="loading">Loading markets...</div>';
 
     try {
@@ -180,11 +249,7 @@ async function loadMarkets() {
     } catch (error) {
         console.error('Failed to load markets:', error);
 
-        if (error.message === 'API_KEY_REQUIRED' || error.message === 'INVALID_API_KEY') {
-            state.hasApiKey = false;
-            showApiKeyRequired();
-        } else {
-            elements.trendingMarkets.innerHTML = `
+        elements.trendingMarkets.innerHTML = `
                 <div class="error-state">
                     <span class="error-icon">⚠️</span>
                     <p>Failed to load markets</p>
@@ -192,24 +257,82 @@ async function loadMarkets() {
                     <button class="btn-retry" onclick="location.reload()">Retry</button>
                 </div>
             `;
-        }
     }
 }
 
 /**
- * Lazy-load prices for displayed markets
+ * Load new markets (sorted by newest first)
  */
+async function loadNewMarkets() {
+    elements.newMarkets.innerHTML = '<div class="loading">Loading new markets...</div>';
+
+    try {
+        // Fetch with sortBy=1 (newest first) - the API client handles active filtering
+        const markets = await sendMessage(MESSAGE_TYPES.GET_MARKETS, {
+            params: { limit: TRENDING_MARKETS_COUNT, sortBy: 1 }
+        });
+
+        if (markets?.error) {
+            throw new Error(markets.error);
+        }
+
+        state.newMarketsList = Array.isArray(markets) ? markets : [];
+        renderNewMarkets();
+    } catch (error) {
+        console.error('Failed to load new markets:', error);
+        elements.newMarkets.innerHTML = `
+            <div class="error-state">
+                <span class="error-icon">⚠️</span>
+                <p>Failed to load new markets</p>
+                <button class="btn-retry" onclick="location.reload()">Retry</button>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Render new markets
+ */
+function renderNewMarkets() {
+    if (state.newMarketsList.length === 0) {
+        elements.newMarkets.innerHTML = `
+            <div class="empty-state">
+                <p>No new markets found</p>
+            </div>
+        `;
+        return;
+    }
+
+    elements.newMarkets.innerHTML = state.newMarketsList.map(market => {
+        const marketId = market.marketId || market.id;
+        return renderMarketCard(market, state.watchlist.includes(String(marketId)));
+    }).join('');
+
+    attachCardListeners(elements.newMarkets);
+}
+
 async function loadMarketPrices() {
     for (const market of state.markets) {
-        const yesTokenId = market.yesTokenId;
-        if (!yesTokenId) continue;
+        let yesTokenId = market.yesTokenId;
+        const marketId = market.marketId || market.id;
 
         try {
+            // If yesTokenId is missing from list response, fetch market details
+            if (!yesTokenId && marketId) {
+                const details = await sendMessage(MESSAGE_TYPES.GET_MARKET_DETAILS, { marketId });
+                if (details && !details.error) {
+                    yesTokenId = details.yesTokenId;
+                    Object.assign(market, details); // Cache details
+                }
+            }
+
+            if (!yesTokenId) continue;
+
             const priceData = await sendMessage(MESSAGE_TYPES.GET_LATEST_PRICE, { tokenId: yesTokenId });
             if (priceData && priceData.price) {
                 const yesPrice = parseFloat(priceData.price);
                 const noPrice = 1 - yesPrice;
-                const card = document.querySelector(`[data-market-id="${market.marketId}"]`);
+                const card = document.querySelector(`[data-market-id="${marketId}"]`);
                 if (card) {
                     const yesFill = card.querySelector('.price-bar.yes .price-bar-fill');
                     const noFill = card.querySelector('.price-bar.no .price-bar-fill');
@@ -222,7 +345,7 @@ async function loadMarketPrices() {
                 }
             }
         } catch (e) {
-            // Non-critical - price will show default
+            console.error('[Opinion Lens] Failed to fetch price for market', marketId, e);
         }
     }
 }
@@ -264,16 +387,6 @@ function renderTrendingMarkets() {
  * Render watchlist
  */
 async function renderWatchlist() {
-    if (!state.hasApiKey) {
-        elements.watchlistMarkets.innerHTML = `
-            <div class="empty-state">
-                <span class="empty-icon">🔑</span>
-                <p>API key required</p>
-            </div>
-        `;
-        return;
-    }
-
     if (state.watchlist.length === 0) {
         elements.watchlistMarkets.innerHTML = `
             <div class="empty-state">
@@ -285,17 +398,38 @@ async function renderWatchlist() {
         return;
     }
 
-    // Fetch details for watchlist markets
+    // Try to find market data from already-loaded trending + new markets first
+    const allLoadedMarkets = [...state.markets, ...state.newMarketsList];
     const watchlistMarkets = [];
+
     for (const marketId of state.watchlist) {
+        // Check local cache first
+        const cached = allLoadedMarkets.find(m => String(m.marketId || m.id) === String(marketId));
+        if (cached) {
+            watchlistMarkets.push(cached);
+            continue;
+        }
+
+        // Fallback: try fetching details from API (works with or without API key via /topic/{id})
         try {
             const market = await sendMessage(MESSAGE_TYPES.GET_MARKET_DETAILS, { marketId });
             if (market && !market.error) {
                 watchlistMarkets.push(market);
             }
         } catch (error) {
-            console.error('Failed to load market:', marketId, error);
+            console.warn('[Opinion Lens] Could not load watchlist market:', marketId);
         }
+    }
+
+    if (watchlistMarkets.length === 0) {
+        elements.watchlistMarkets.innerHTML = `
+            <div class="empty-state">
+                <span class="empty-icon">⭐</span>
+                <p>No watchlist data available</p>
+                <p class="empty-hint">Markets may have expired or been removed</p>
+            </div>
+        `;
+        return;
     }
 
     elements.watchlistMarkets.innerHTML = watchlistMarkets.map(market =>
@@ -312,16 +446,17 @@ function renderMarketCard(market, isWatched) {
     const marketId = market.marketId || market.id;
     const title = market.marketTitle || market.title || 'Untitled Market';
 
-    // Default prices (will be updated by loadMarketPrices)
-    const yesPrice = 0.5;
-    const noPrice = 0.5;
+    // Default prices (will be updated by loadMarketPrices if live)
+    const yesPrice = market.yesPrice !== undefined ? market.yesPrice : 0.5;
+    const noPrice = 1 - yesPrice;
 
     const volume = parseFloat(market.volume24h) || 0;
     // cutoffAt is a unix timestamp in seconds
     const endDate = market.cutoffAt ? new Date(market.cutoffAt * 1000).toISOString() : null;
+    const yesTokenId = market.yesTokenId || '';
 
     return `
-        <div class="market-card" data-market-id="${marketId}">
+        <div class="market-card" data-market-id="${marketId}" data-token-id="${yesTokenId}">
             <div class="market-header">
                 <span class="market-title">${escapeHtml(title)}</span>
                 <span class="market-star ${isWatched ? 'active' : ''}" data-action="toggle-watchlist">
@@ -334,7 +469,7 @@ function renderMarketCard(market, isWatched) {
                         <div class="price-bar-fill" style="width: ${yesPrice * 100}%"></div>
                     </div>
                     <div class="price-label yes">
-                        <span>Yes</span>
+                        <span>${market.yesLabel || 'Yes'}</span>
                         <span>${formatPrice(yesPrice)}</span>
                     </div>
                 </div>
@@ -343,7 +478,7 @@ function renderMarketCard(market, isWatched) {
                         <div class="price-bar-fill" style="width: ${noPrice * 100}%"></div>
                     </div>
                     <div class="price-label no">
-                        <span>No</span>
+                        <span>${market.noLabel || 'No'}</span>
                         <span>${formatPrice(noPrice)}</span>
                     </div>
                 </div>
@@ -366,7 +501,9 @@ function attachCardListeners(container) {
         // Card click → open market
         card.addEventListener('click', (e) => {
             if (e.target.closest('[data-action]')) return;
-            chrome.tabs.create({ url: `${OPINION_APP_URL}/market/${marketId}` });
+            const isMulti = card.dataset.isMulti === 'true';
+            const targetUrl = `${OPINION_APP_URL}/detail?topicId=${marketId}${isMulti ? '&type=multi' : ''}`;
+            chrome.tabs.create({ url: targetUrl });
         });
 
         // Star click → toggle watchlist
@@ -404,15 +541,21 @@ function switchTab(tab) {
     });
 
     elements.trendingSection.classList.toggle('hidden', tab !== 'trending');
+    elements.newSection.classList.toggle('hidden', tab !== 'new');
     elements.watchlistSection.classList.toggle('hidden', tab !== 'watchlist');
+    elements.aboutSection.classList.toggle('hidden', tab !== 'about');
+
+    // Hide search and footer on about tab
+    const searchContainer = document.querySelector('.search-container');
+    const footer = document.querySelector('.footer');
+    if (searchContainer) searchContainer.style.display = tab === 'about' ? 'none' : '';
+    if (footer) footer.style.display = tab === 'about' ? 'none' : '';
 }
 
 /**
  * Handle search
  */
 async function handleSearch(e) {
-    if (!state.hasApiKey) return;
-
     const query = e.target.value.trim();
 
     if (!query) {
@@ -449,9 +592,27 @@ function handleMessage(message) {
 function updateMarketPrice(data) {
     const cards = document.querySelectorAll(`[data-token-id="${data.tokenId}"]`);
     cards.forEach(card => {
-        const priceEl = card.querySelector('.price-value');
-        if (priceEl) {
-            priceEl.textContent = formatPrice(data.price);
+        const yesFill = card.querySelector('.price-bar.yes .price-bar-fill');
+        const noFill = card.querySelector('.price-bar.no .price-bar-fill');
+        const yesLabel = card.querySelector('.price-label.yes span:last-child');
+        const noLabel = card.querySelector('.price-label.no span:last-child');
+
+        const yesPrice = parseFloat(data.price);
+        const noPrice = 1 - yesPrice;
+
+        // Perform flash animation if elements exist
+        if (yesLabel && noLabel && yesFill && noFill) {
+            yesFill.style.width = `${yesPrice * 100}%`;
+            noFill.style.width = `${noPrice * 100}%`;
+            yesLabel.textContent = formatPrice(yesPrice);
+            noLabel.textContent = formatPrice(noPrice);
+
+            // Subtle flash effect on the card
+            card.style.transition = 'background-color 0.3s ease';
+            card.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+            setTimeout(() => {
+                card.style.backgroundColor = '';
+            }, 400);
         }
     });
 }
