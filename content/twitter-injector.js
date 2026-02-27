@@ -953,6 +953,9 @@ function updateEmblemPrice(data) {
  * Initialize
  */
 async function init() {
+  // Bail out immediately if context is already dead
+  if (!isContextValid()) return;
+
   // Check if Twitter integration is enabled
   try {
     const settings = await chrome.runtime.sendMessage({ type: MESSAGE_TYPES.GET_SETTINGS });
@@ -961,7 +964,11 @@ async function init() {
       return;
     }
   } catch (error) {
-    console.error('[Opinion Lens] Failed to get settings:', error);
+    if (error.message?.includes('Extension context invalidated')) {
+      contextInvalidated = true;
+      return;
+    }
+    // Settings fetch failed — continue anyway (default: enabled)
   }
 
   console.log('[Opinion Lens] Twitter integration active (Enhanced)');
@@ -973,15 +980,27 @@ async function init() {
   const observer = new TweetObserver(processTweet);
   observer.start();
 
-  // Refresh index periodically
-  setInterval(refreshIndex, CONFIG.cacheExpiry);
-
-  // Handle real-time price updates
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === MESSAGE_TYPES.PRICE_UPDATE) {
-      updateEmblemPrice(message.data);
+  // Refresh index periodically (with context check)
+  const refreshInterval = setInterval(() => {
+    if (!isContextValid()) {
+      clearInterval(refreshInterval);
+      observer.stop();
+      return;
     }
-  });
+    refreshIndex();
+  }, CONFIG.cacheExpiry);
+
+  // Handle real-time price updates (with context check)
+  try {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (!isContextValid()) return;
+      if (message.type === MESSAGE_TYPES.PRICE_UPDATE) {
+        updateEmblemPrice(message.data);
+      }
+    });
+  } catch (error) {
+    // Context may have been invalidated between check and addListener
+  }
 }
 
 // Initialize when DOM is ready
