@@ -268,13 +268,21 @@ async function refreshIndex() {
     return;
   }
 
+  console.log('[Opinion Lens] Refreshing market index...');
   const markets = await fetchMarkets();
+  console.log(`[Opinion Lens] Fetched ${markets.length} markets from API`);
   if (markets.length > 0) {
     if (!marketIndex) {
       marketIndex = new MarketIndex();
     }
     marketIndex.update(markets);
     indexLastUpdate = now;
+    // Log first 3 market titles for debugging
+    markets.slice(0, 3).forEach(m =>
+      console.log(`[Opinion Lens]   → ${m.marketId || m.id}: ${(m.title || m.marketTitle || '').substring(0, 60)}`)
+    );
+  } else {
+    console.warn('[Opinion Lens] No markets returned from API - emblems will not appear');
   }
 }
 

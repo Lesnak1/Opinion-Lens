@@ -59,7 +59,8 @@
         "https://ws.opinion.trade/*",
         "wss://ws.opinion.trade/*",
         "https://proxy.opinion.trade/*",
-        "https://proxy.opinion.trade:8443/*"
+        "https://proxy.opinion.trade:8443/*",
+        "https://app.opinion.trade/*"
     ],
     "options_page": "options/options.html",
     "web_accessible_resources": [
