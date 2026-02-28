@@ -191,18 +191,31 @@ class MarketIndex {
     }
 
     // 2. Check for Opinion market slug URL (e.g. app.opinion.trade/market/sebi-finds-...)
+    // Twitter truncates URLs, so slug may be partial like "us-stri" instead of "us-strikes-iran-by"
     const slugMatch = text.match(/app\.opinion\.trade\/market\/([a-z0-9\-]+)/i);
     if (slugMatch) {
       const slug = slugMatch[1].toLowerCase();
-      // Try to match slug words against market titles
-      const slugWords = slug.split('-').filter(w => w.length > 2);
+      const slugWords = slug.split('-').filter(w => w.length > 1);
+
+      // Try prefix match first (most reliable for truncated slugs)
       for (const market of this.markets) {
-        const title = (market.marketTitle || market.title || '').toLowerCase();
-        const matchCount = slugWords.filter(w => title.includes(w)).length;
-        if (matchCount >= 3) {
+        const marketSlug = (market.slug || '').toLowerCase();
+        if (marketSlug && marketSlug.startsWith(slug)) {
           return [{ market, score: 998, keywords: ['SLUG_MATCH'] }];
         }
       }
+
+      // Try word-based match (2+ words from slug found in market title)
+      if (slugWords.length >= 2) {
+        for (const market of this.markets) {
+          const title = (market.marketTitle || market.title || '').toLowerCase();
+          const matchCount = slugWords.filter(w => title.includes(w)).length;
+          if (matchCount >= 2) {
+            return [{ market, score: 998, keywords: ['SLUG_MATCH'] }];
+          }
+        }
+      }
+
       // Slug found but not in local index — return SLUG_FETCH to trigger API search
       return [{ market: { slug, _needsSlugFetch: true }, score: 997, keywords: ['SLUG_FETCH'] }];
     }
@@ -798,23 +811,55 @@ async function processTweet(tweet) {
   const tweetTextNode = tweet.querySelector('[data-testid="tweetText"]');
   if (!tweetTextNode) return;
 
-  // Get visible text + extract full URLs from <a href> (Twitter truncates URLs in textContent)
+  // Get visible text + extract full URLs from various tweet elements
+  // Twitter wraps all external URLs with t.co redirects, so <a href> won't have opinion.trade
+  // Instead, check: title attributes, card wrappers, data attributes, and visible text
   let text = tweetTextNode.textContent || '';
-  const links = tweetTextNode.querySelectorAll('a[href]');
-  links.forEach(link => {
-    const href = link.href || '';
-    // Only add Opinion URLs (not t.co or other shortened links)
-    if (href.includes('opinion.trade')) {
-      text += ' ' + href;
-    }
+
+  // 1. Check <a> title attributes (Twitter sometimes stores full URL in title)
+  const textLinks = tweetTextNode.querySelectorAll('a[href]');
+  textLinks.forEach(link => {
+    const title = link.getAttribute('title') || '';
+    const ariaLabel = link.getAttribute('aria-label') || '';
+    const expandedUrl = link.getAttribute('data-expanded-url') || '';
+    [title, ariaLabel, expandedUrl].forEach(attr => {
+      if (attr.includes('opinion.trade') && !text.includes(attr)) {
+        text += ' ' + attr;
+      }
+    });
   });
-  // Also check the entire tweet for any Opinion links (including in card previews)
-  const allLinks = tweet.querySelectorAll('a[href*="opinion.trade"]');
-  allLinks.forEach(link => {
-    const href = link.href || '';
-    if (!text.includes(href)) {
-      text += ' ' + href;
+
+  // 2. Check the tweet card wrapper (embedded previews have direct links)
+  const cardWrapper = tweet.querySelector('[data-testid="card.wrapper"]');
+  if (cardWrapper) {
+    // Card links, titles, and text content may contain the full URL
+    const cardLinks = cardWrapper.querySelectorAll('a[href]');
+    cardLinks.forEach(link => {
+      const href = link.href || '';
+      const title = link.getAttribute('title') || '';
+      [href, title].forEach(attr => {
+        if (attr.includes('opinion.trade') && !text.includes(attr)) {
+          text += ' ' + attr;
+        }
+      });
+    });
+    // Also grab card text content (may have market title/URL)
+    const cardText = cardWrapper.textContent || '';
+    if (cardText.includes('opinion') && !text.includes(cardText)) {
+      text += ' ' + cardText;
     }
+  }
+
+  // 3. Check ALL links in the tweet (including retweet, reply context)
+  const allTweetLinks = tweet.querySelectorAll('a[href*="opinion"], a[title*="opinion"]');
+  allTweetLinks.forEach(link => {
+    const href = link.href || '';
+    const title = link.getAttribute('title') || '';
+    [href, title].forEach(attr => {
+      if (attr.includes('opinion.trade') && !text.includes(attr)) {
+        text += ' ' + attr;
+      }
+    });
   });
 
   if (text.length < 10) return; // Skip very short tweets
