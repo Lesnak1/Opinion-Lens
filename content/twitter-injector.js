@@ -203,6 +203,8 @@ class MarketIndex {
           return [{ market, score: 998, keywords: ['SLUG_MATCH'] }];
         }
       }
+      // Slug found but not in local index — return SLUG_FETCH to trigger API search
+      return [{ market: { slug, _needsSlugFetch: true }, score: 997, keywords: ['SLUG_FETCH'] }];
     }
 
     const matches = new Map();
@@ -246,7 +248,7 @@ async function fetchMarkets() {
   try {
     const response = await chrome.runtime.sendMessage({
       type: MESSAGE_TYPES.GET_MARKETS,
-      params: { limit: 20, status: 'activated', sortBy: 5 }
+      params: { limit: 100, status: 'activated', sortBy: 5 }
     });
     return Array.isArray(response) ? response : (response?.items || []);
   } catch (error) {
@@ -796,7 +798,25 @@ async function processTweet(tweet) {
   const tweetTextNode = tweet.querySelector('[data-testid="tweetText"]');
   if (!tweetTextNode) return;
 
-  const text = tweetTextNode.textContent || '';
+  // Get visible text + extract full URLs from <a href> (Twitter truncates URLs in textContent)
+  let text = tweetTextNode.textContent || '';
+  const links = tweetTextNode.querySelectorAll('a[href]');
+  links.forEach(link => {
+    const href = link.href || '';
+    // Only add Opinion URLs (not t.co or other shortened links)
+    if (href.includes('opinion.trade')) {
+      text += ' ' + href;
+    }
+  });
+  // Also check the entire tweet for any Opinion links (including in card previews)
+  const allLinks = tweet.querySelectorAll('a[href*="opinion.trade"]');
+  allLinks.forEach(link => {
+    const href = link.href || '';
+    if (!text.includes(href)) {
+      text += ' ' + href;
+    }
+  });
+
   if (text.length < 10) return; // Skip very short tweets
 
   // Check context validity before processing
@@ -858,6 +878,50 @@ async function processTweet(tweet) {
           console.warn(`[Opinion Lens] Could not fetch market ${mId} from API`);
           continue; // Skip this match if API fetch fails
         }
+      } else if (match.market._needsSlugFetch) {
+        // SLUG_FETCH: tweet has opinion.trade/market/ URL but market not in local index
+        // Search by fetching all markets and matching slug words
+        console.log(`[Opinion Lens] Slug match: searching for slug "${match.market.slug}" via API`);
+        try {
+          const allMarkets = await chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.GET_MARKETS,
+            params: { limit: 100, status: 'activated', sortBy: 5 }
+          });
+          const marketList = Array.isArray(allMarkets) ? allMarkets : (allMarkets?.items || []);
+          const slugWords = match.market.slug.split('-').filter(w => w.length > 2);
+
+          // Find best matching market by slug words  
+          let bestMatch = null;
+          let bestScore = 0;
+          for (const m of marketList) {
+            const title = (m.title || m.marketTitle || '').toLowerCase();
+            const slug = (m.slug || '').toLowerCase();
+            // Direct slug match
+            if (slug && match.market.slug.startsWith(slug.substring(0, 10))) {
+              bestMatch = m;
+              bestScore = 100;
+              break;
+            }
+            // Word-based match
+            const score = slugWords.filter(w => title.includes(w) || slug.includes(w)).length;
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatch = m;
+            }
+          }
+
+          if (bestMatch && bestScore >= 2) {
+            match.market = bestMatch;
+            match.market.marketId = bestMatch.marketId || bestMatch.id || bestMatch.topicId;
+            console.log(`[Opinion Lens] Slug resolved to: ${(bestMatch.title || bestMatch.marketTitle || '').substring(0, 50)}`);
+          } else {
+            console.warn(`[Opinion Lens] No market found for slug "${match.market.slug}"`);
+            continue;
+          }
+        } catch (e) {
+          console.warn('[Opinion Lens] Slug search failed:', e.message);
+          continue;
+        }
       } else {
         // Normal match: fetch details to ensure we have yesTokenId
         const details = await chrome.runtime.sendMessage({
@@ -889,7 +953,7 @@ async function processTweet(tweet) {
   }
 
   // Filter out any matches that failed to fetch
-  const validMatches = topMatches.filter(m => !m.market._needsFetch);
+  const validMatches = topMatches.filter(m => !m.market._needsFetch && !m.market._needsSlugFetch);
   if (validMatches.length === 0) {
     tweet.setAttribute(CONFIG.statusAttr, 'no-match');
     return;
