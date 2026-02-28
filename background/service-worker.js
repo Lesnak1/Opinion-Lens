@@ -102,6 +102,9 @@ async function handleMessage(message, sender) {
         case MESSAGE_TYPES.SEARCH_MARKETS:
             return apiClient.searchMarkets(message.query);
 
+        case MESSAGE_TYPES.SEARCH_BY_SLUG:
+            return apiClient.searchBySlug(message.slug);
+
         case MESSAGE_TYPES.SUBSCRIBE_USER_MARKET:
             if (wsManager.isConnected) {
                 wsManager.subscribeUserMarket(message.marketId);

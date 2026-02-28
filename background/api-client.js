@@ -242,6 +242,90 @@ class ApiClient {
     }
 
     /**
+     * Search for a market by slug — paginates through ALL API pages until found
+     */
+    async searchBySlug(slug) {
+        const slugLower = slug.toLowerCase();
+        const slugWords = slugLower.split('-').filter(w => w.length > 1);
+        console.log(`[Opinion Lens] searchBySlug: Looking for "${slug}" across all API pages...`);
+
+        for (let p = 1; p <= 50; p++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const response = await fetch(
+                    `https://proxy.opinion.trade:8443/api/bsc/api/v2/topic?limit=20&sortBy=1&page=${p}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(this.apiKey ? { 'apikey': this.apiKey } : {})
+                    },
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) break;
+                const json = await response.json();
+                const list = json?.list || json?.result?.list || [];
+                if (list.length === 0) break;
+
+                // Check each market for slug match
+                for (const m of list) {
+                    const mSlug = (m.slug || '').toLowerCase();
+                    const mTitle = (m.title || m.topicTitle || '').toLowerCase();
+
+                    // Direct slug prefix match
+                    if (mSlug && (mSlug.startsWith(slugLower) || slugLower.startsWith(mSlug))) {
+                        console.log(`[Opinion Lens] searchBySlug: FOUND on page ${p}: "${m.title || m.topicTitle}"`);
+                        return this._mapTopicToMarket(m);
+                    }
+
+                    // Word-based match (2+ slug words found in title or slug)
+                    if (slugWords.length >= 2) {
+                        const score = slugWords.filter(w => mTitle.includes(w) || mSlug.includes(w)).length;
+                        if (score >= 2) {
+                            console.log(`[Opinion Lens] searchBySlug: FOUND (words) on page ${p}: "${m.title || m.topicTitle}"`);
+                            return this._mapTopicToMarket(m);
+                        }
+                    }
+                }
+
+                if (list.length < 20) break; // No more pages
+            } catch (e) {
+                console.warn(`[Opinion Lens] searchBySlug page ${p} failed:`, e.message);
+                break;
+            }
+        }
+
+        console.warn(`[Opinion Lens] searchBySlug: NOT FOUND for slug "${slug}"`);
+        return null;
+    }
+
+    /**
+     * Map a raw topic API object to our internal market format
+     */
+    _mapTopicToMarket(m) {
+        return {
+            marketId: m.topicId,
+            title: m.title || m.topicTitle || '',
+            marketTitle: m.title || m.topicTitle || '',
+            yesTokenId: m.yesPos || '',
+            noTokenId: m.noPos || '',
+            yesLabel: m.yesLabel || 'YES',
+            noLabel: m.noLabel || 'NO',
+            volume24h: parseFloat(m.volume24h || 0),
+            totalVolume: parseFloat(m.volume || 0),
+            cutoffAt: m.cutoffTime || null,
+            createTime: m.createTime || 0,
+            yesPrice: parseFloat(m.yesMarketPrice || m.yesBuyPrice || 0.5),
+            noPrice: parseFloat(m.noBuyPrice || 0),
+            slug: m.slug || '',
+            thumbnailUrl: m.thumbnailUrl || '',
+            labelName: m.labelName || [],
+            childList: m.childList || [],
+            status: m.status,
+        };
+    }
+    /**
      * Get latest token price
      */
     async getLatestPrice(tokenId) {

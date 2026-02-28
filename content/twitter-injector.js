@@ -925,40 +925,16 @@ async function processTweet(tweet) {
         }
       } else if (match.market._needsSlugFetch) {
         // SLUG_FETCH: tweet has opinion.trade/market/ URL but market not in local index
-        // Search by fetching all markets and matching slug words
-        console.log(`[Opinion Lens] Slug match: searching for slug "${match.market.slug}" via API`);
+        // Use dedicated slug search that paginates through ALL API pages
+        console.log(`[Opinion Lens] Slug match: searching for slug "${match.market.slug}" via SEARCH_BY_SLUG`);
         try {
-          const allMarkets = await chrome.runtime.sendMessage({
-            type: MESSAGE_TYPES.GET_MARKETS,
-            params: { limit: 100, status: 'activated', sortBy: 5 }
+          const found = await chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.SEARCH_BY_SLUG,
+            slug: match.market.slug
           });
-          const marketList = Array.isArray(allMarkets) ? allMarkets : (allMarkets?.items || []);
-          const slugWords = match.market.slug.split('-').filter(w => w.length > 2);
-
-          // Find best matching market by slug words  
-          let bestMatch = null;
-          let bestScore = 0;
-          for (const m of marketList) {
-            const title = (m.title || m.marketTitle || '').toLowerCase();
-            const slug = (m.slug || '').toLowerCase();
-            // Direct slug match
-            if (slug && match.market.slug.startsWith(slug.substring(0, 10))) {
-              bestMatch = m;
-              bestScore = 100;
-              break;
-            }
-            // Word-based match
-            const score = slugWords.filter(w => title.includes(w) || slug.includes(w)).length;
-            if (score > bestScore) {
-              bestScore = score;
-              bestMatch = m;
-            }
-          }
-
-          if (bestMatch && bestScore >= 2) {
-            match.market = bestMatch;
-            match.market.marketId = bestMatch.marketId || bestMatch.id || bestMatch.topicId;
-            console.log(`[Opinion Lens] Slug resolved to: ${(bestMatch.title || bestMatch.marketTitle || '').substring(0, 50)}`);
+          if (found && !found.error && found.marketId) {
+            match.market = found;
+            console.log(`[Opinion Lens] Slug resolved to: ${(found.title || found.marketTitle || '').substring(0, 60)}`);
           } else {
             console.warn(`[Opinion Lens] No market found for slug "${match.market.slug}"`);
             continue;
