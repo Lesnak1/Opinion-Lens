@@ -26,6 +26,9 @@ const processedTweets = new WeakSet();
 // Context validity flag — when extension is updated/reloaded, content scripts lose connection
 let contextInvalidated = false;
 
+// Cache of market IDs that failed to fetch (expired/deleted) — avoid retrying
+const failedMarketIds = new Set();
+
 /**
  * Check if extension context is still valid (not invalidated by update/reload)
  */
@@ -898,6 +901,10 @@ async function processTweet(tweet) {
 
       // If this is a URL_FETCH marker (market not in local index), fetch from API directly
       if (match.market._needsFetch) {
+        // Skip if already known to be expired/deleted
+        if (failedMarketIds.has(String(mId))) {
+          continue;
+        }
         console.log(`[Opinion Lens] URL match: fetching market ${mId} from API (not in local index)`);
         const details = await chrome.runtime.sendMessage({
           type: MESSAGE_TYPES.GET_MARKET_DETAILS,
@@ -920,7 +927,7 @@ async function processTweet(tweet) {
             childList: details.childList || [],
           };
         } else {
-          console.warn(`[Opinion Lens] Could not fetch market ${mId} from API`);
+          failedMarketIds.add(String(mId));
           continue; // Skip this match if API fetch fails
         }
       } else if (match.market._needsSlugFetch) {
