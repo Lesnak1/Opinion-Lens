@@ -94,31 +94,42 @@ class ApiClient {
      * Get markets list
      */
     async getMarkets(params = {}) {
-        const { page = 1, limit = 20, status = 'activated', sortBy = 5 } = params;
+        const { page = 1, limit = 200, status = 'activated', sortBy = 5 } = params;
 
         // ── Authenticated path: use the official /openapi/market endpoint ──
         if (this.apiKey) {
             // API docs: sort=1(new), 2(ending soon), 3(vol desc), 5(vol24h desc)
             // API docs: status=activated or resolved, limit max=20
-            const queryParams = new URLSearchParams({
-                page: String(page),
-                limit: String(Math.min(limit, 20)),
-                status,
-                sort: String(sortBy)
-            });
-
-            const result = await this.fetchWithTimeout(
-                `${PROXY_API_BASE}/market?${queryParams}`
-            );
-
-            return result?.list || [];
+            // Paginate to get more than 20 markets
+            const allMarkets = [];
+            const maxPages = Math.ceil(Math.min(limit, 200) / 20);
+            for (let p = 1; p <= maxPages; p++) {
+                try {
+                    const queryParams = new URLSearchParams({
+                        page: String(p),
+                        limit: '20',
+                        status,
+                        sort: String(sortBy)
+                    });
+                    const result = await this.fetchWithTimeout(
+                        `${PROXY_API_BASE}/market?${queryParams}`
+                    );
+                    const pageList = result?.list || [];
+                    allMarkets.push(...pageList);
+                    if (pageList.length < 20) break; // No more pages
+                } catch {
+                    break;
+                }
+            }
+            console.log(`[Opinion Lens] Authenticated: fetched ${allMarkets.length} markets across ${Math.min(maxPages, Math.ceil(allMarkets.length / 20))} pages`);
+            return allMarkets.slice(0, limit);
         }
 
         // ── Public fallback: fetch multiple pages from /topic, filter client-side ──
         try {
-            // Fetch 5 pages of 20 to get a large pool of markets
+            // Fetch up to 20 pages of 20 to get a large pool of markets
             const allMarkets = [];
-            for (let p = 1; p <= 5; p++) {
+            for (let p = 1; p <= 20; p++) {
                 try {
                     const pageResult = await this.fetchWithTimeout(
                         `https://proxy.opinion.trade:8443/api/bsc/api/v2/topic?limit=20&sortBy=1&page=${p}`
@@ -131,12 +142,16 @@ class ApiClient {
                 }
             }
 
+            console.log(`[Opinion Lens] Public: fetched ${allMarkets.length} raw markets`);
+
             const now = Math.floor(Date.now() / 1000);
 
-            // Only keep ACTIVE markets (status === 2 AND cutoff in the future)
+            // Only keep ACTIVE markets (status === 2 AND cutoff in the future or no cutoff)
             const activeMarkets = allMarkets.filter(m =>
                 m.status === 2 && (!m.cutoffTime || m.cutoffTime > now)
             );
+
+            console.log(`[Opinion Lens] Active after filtering: ${activeMarkets.length} markets`);
 
             // Map to our internal format
             const mapped = activeMarkets.map(m => ({
